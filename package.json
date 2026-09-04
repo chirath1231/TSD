@@ -1,0 +1,15 @@
+{
+  "name": "tsd-properties-international",
+  "version": "1.0.0",
+  "description": "TSD Property Solutions - Real Estate Management System",
+  "scripts": {
+    "server": "cd server && node index.js",
+    "client": "cd client && npm run dev",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "install-all": "npm install && cd server && npm install && cd ../client && npm install",
+    "build": "cd client && npm run build"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
