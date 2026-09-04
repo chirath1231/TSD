@@ -16,7 +16,6 @@ import {
   FiX,
   FiShare2,
   FiCopy,
-  FiExternalLink,
 } from "react-icons/fi";
 import { BsBuildings, BsCameraFill } from "react-icons/bs";
 
@@ -147,18 +146,6 @@ export default function PropertyDetail() {
   const currentTour = hasTours
     ? property.virtual_tours[selectedTourIndex]
     : null;
-  // Tours built in-house are served from our own /api/tours/view/ endpoint and
-  // can be safely embedded. External links (e.g. pasted Insta360 share URLs)
-  // are served with a `frame-ancestors` CSP that blocks embedding on any other
-  // site, so those must be opened in a new tab instead of iframed.
-  const isEmbeddableTour = (url) => {
-    if (!url) return false;
-    try {
-      return new URL(url, window.location.origin).origin === window.location.origin;
-    } catch {
-      return false;
-    }
-  };
   const catColors = CATEGORY_COLORS[property.category] || {};
 
   const getPrice = () => {
@@ -350,93 +337,49 @@ export default function PropertyDetail() {
                   <BsCameraFill size={22} /> 360° Virtual Tours
                 </h2>
                 <div className="detail-tour-viewer">
-                  {isEmbeddableTour(currentTour.tour_url) ? (
-                    <>
-                      <iframe
-                        src={currentTour.tour_url}
-                        title={`360° Tour - ${currentTour.room_name}`}
-                        allowFullScreen
-                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation"
-                        style={{
-                          width: "100%",
-                          height: "420px",
-                          border: "none",
-                          borderRadius: "8px",
-                          background: "#000",
-                        }}
-                        onLoad={(e) => {
-                          e.currentTarget.nextElementSibling?.style.setProperty(
-                            "display",
-                            "none",
-                            "important",
-                          );
-                        }}
-                        onError={(e) => {
-                          e.currentTarget.style.display = "none";
-                          const fallback = e.currentTarget.nextElementSibling;
-                          if (fallback) fallback.style.display = "flex";
-                        }}
-                      />
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          minHeight: "420px",
-                          background: "#f3f4f8",
-                          borderRadius: "8px",
-                          flexDirection: "column",
-                          gap: "16px",
-                          color: "#6b7280",
-                        }}
-                      >
-                        <BsCameraFill size={48} />
-                        <p>
-                          360° tour currently unavailable. Please try again later.
-                        </p>
-                      </div>
-                    </>
-                  ) : (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        minHeight: "420px",
-                        background: "#f3f4f8",
-                        borderRadius: "8px",
-                        flexDirection: "column",
-                        gap: "16px",
-                        color: "#6b7280",
-                      }}
-                    >
-                      <BsCameraFill size={48} />
-                      <p>
-                        This 360° tour is hosted externally and can't be
-                        embedded here.
-                      </p>
-                      <a
-                        href={currentTour.tour_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="detail-tour-external-link"
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "8px",
-                          padding: "10px 20px",
-                          borderRadius: "8px",
-                          background: "#1b4332",
-                          color: "#fff",
-                          fontWeight: 600,
-                          fontSize: "14px",
-                          textDecoration: "none",
-                        }}
-                      >
-                        Open 360° Tour <FiExternalLink size={16} />
-                      </a>
-                    </div>
-                  )}
+                  <iframe
+                    src={currentTour.tour_url}
+                    title={`360° Tour - ${currentTour.room_name}`}
+                    allowFullScreen
+                    sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation"
+                    style={{
+                      width: "100%",
+                      height: "420px",
+                      border: "none",
+                      borderRadius: "8px",
+                      background: "#000",
+                    }}
+                    onLoad={(e) => {
+                      e.currentTarget.nextElementSibling?.style.setProperty(
+                        "display",
+                        "none",
+                        "important",
+                      );
+                    }}
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                      const fallback = e.currentTarget.nextElementSibling;
+                      if (fallback) fallback.style.display = "flex";
+                    }}
+                  />
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      minHeight: "420px",
+                      background: "#f3f4f8",
+                      borderRadius: "8px",
+                      flexDirection: "column",
+                      gap: "16px",
+                      color: "#6b7280",
+                    }}
+                  >
+                    <BsCameraFill size={48} />
+                    <p>
+                      360° tour currently unavailable. Please try again later.
+                    </p>
+                  </div>
                 </div>
                 {property.virtual_tours.length > 1 && (
                   <div className="detail-tour-tabs">
