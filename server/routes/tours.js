@@ -210,7 +210,7 @@ router.get("/view/:id", async (req, res) => {
     );
     const propertyId = tourResult.rows?.[0]?.property_id || null;
     const propertyUrl = propertyId
-      ? `http://localhost:3000/property/${propertyId}`
+      ? `${process.env.FRONTEND_URL}/property/${propertyId}`
       : null;
     const scenesResult = await db.query(
       "SELECT scene_id, name, image_url FROM tour_scenes WHERE tour_id=$1 ORDER BY id ASC",

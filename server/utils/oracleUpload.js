@@ -5,8 +5,8 @@ const client = new objectStorage.ObjectStorageClient({
   authenticationDetailsProvider: provider,
 });
 
-const namespaceName = "axz8nar3k6bi";  // 🔥 you must add this
-const bucketName = "property-images";
+const namespaceName = process.env.OCI_NAMESPACE;
+const bucketName = process.env.OCI_BUCKET;
 
 async function uploadToOracle(file) {
   const objectName = Date.now() + "-" + file.originalname;
@@ -19,7 +19,7 @@ async function uploadToOracle(file) {
     contentType: file.mimetype,
   });
 
-  return `https://objectstorage.ap-singapore-1.oraclecloud.com/n/${namespaceName}/b/${bucketName}/o/${objectName}`;
+  return `https://objectstorage.${process.env.OCI_REGION}.oraclecloud.com/n/${namespaceName}/b/${bucketName}/o/${objectName}`;
 }
 
 module.exports = uploadToOracle;

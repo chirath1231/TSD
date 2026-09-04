@@ -5,9 +5,8 @@ const client = new objectStorage.ObjectStorageClient({
   authenticationDetailsProvider: provider,
 });
 
-// ✅ MUST MATCH upload file
-const namespaceName = "axz8nar3k6bi";
-const bucketName = "property-images";
+const namespaceName = process.env.OCI_NAMESPACE;
+const bucketName = process.env.OCI_BUCKET;
 
 async function deleteFromOracle(fileUrl) {
   try {

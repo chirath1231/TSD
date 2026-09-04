@@ -1,11 +1,11 @@
 const { Pool } = require("pg");
 
 const pool = new Pool({
-  host: process.env.DB_HOST || "crossover.proxy.rlwy.net",
-  port: process.env.DB_PORT || 39666,
-  database: process.env.DB_NAME || "railway",
-  user: process.env.DB_USER || "postgres",
-  password: process.env.DB_PASSWORD || "lm8KAzkC9t5tbBhflaoSMVkjMM0RGS2H",
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  database: process.env.DB_NAME,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
   ssl: {
     rejectUnauthorized: false, // Required for Railway.app
   },
