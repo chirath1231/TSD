@@ -19,7 +19,7 @@ async function uploadToOracle(file) {
     contentType: file.mimetype,
   });
 
-  return `https://objectstorage.${process.env.OCI_REGION}.oraclecloud.com/n/${namespaceName}/b/${bucketName}/o/${objectName}`;
+  return `https://objectstorage.${process.env.OCI_REGION}.oraclecloud.com/n/${namespaceName}/b/${bucketName}/o/${encodeURIComponent(objectName)}`;
 }
 
 module.exports = uploadToOracle;
