@@ -1,5 +1,7 @@
 const express = require("express");
 const multer = require("multer");
+const dns = require("dns").promises;
+const net = require("net");
 const db = require("../config/database");
 const uploadToOracle = require("../utils/oracleUpload");
 const authMiddleware = require("../middleware/auth");
@@ -8,6 +10,28 @@ const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 let tourSchemaReady = false;
 let tourHotspotColumnsCache = null;
+
+const MAX_IMPORT_BYTES = 25 * 1024 * 1024;
+
+function isPrivateOrReservedIp(ip) {
+  if (net.isIP(ip) === 4) {
+    const [a, b] = ip.split(".").map(Number);
+    if (a === 10) return true;
+    if (a === 127) return true;
+    if (a === 0) return true;
+    if (a === 169 && b === 254) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    return false;
+  }
+  if (net.isIP(ip) === 6) {
+    const lower = ip.toLowerCase();
+    if (lower === "::1") return true;
+    if (lower.startsWith("fe80:") || lower.startsWith("fc") || lower.startsWith("fd")) return true;
+    return false;
+  }
+  return true; // couldn't classify — refuse rather than risk it
+}
 
 async function ensureTourSchema() {
   if (tourSchemaReady) return;
@@ -127,6 +151,91 @@ router.post("/upload-scene", authMiddleware, upload.single("image"), async (req,
   } catch (error) {
     console.error("UPLOAD scene error:", error);
     res.status(500).json({ error: "Failed to upload scene image" });
+  }
+});
+
+/* IMPORT SCENE IMAGE FROM A DIRECT URL */
+router.post("/import-from-url", authMiddleware, async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url || typeof url !== "string") {
+      return res.status(400).json({ error: "url is required" });
+    }
+
+    let parsed;
+    try {
+      parsed = new URL(url);
+    } catch {
+      return res.status(400).json({ error: "That's not a valid URL" });
+    }
+    if (!["http:", "https:"].includes(parsed.protocol)) {
+      return res.status(400).json({ error: "Only http/https URLs are supported" });
+    }
+
+    let addresses;
+    try {
+      addresses = await dns.lookup(parsed.hostname, { all: true });
+    } catch {
+      return res.status(400).json({ error: "Could not resolve that host" });
+    }
+    if (!addresses.length || addresses.some((a) => isPrivateOrReservedIp(a.address))) {
+      return res.status(400).json({ error: "That URL cannot be fetched" });
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    let response;
+    try {
+      response = await fetch(parsed.toString(), {
+        signal: controller.signal,
+        redirect: "follow",
+      });
+    } catch {
+      return res.status(400).json({ error: "Failed to fetch that URL" });
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    if (!response.ok) {
+      return res
+        .status(400)
+        .json({ error: `The server at that URL responded with ${response.status}` });
+    }
+
+    const contentType = (response.headers.get("content-type") || "").split(";")[0].trim();
+    if (!contentType.startsWith("image/")) {
+      return res.status(400).json({
+        error:
+          "That link doesn't point directly to an image file, so it can't be imported. " +
+          "Share/viewer pages (like an Insta360 cloud share link) aren't direct images — " +
+          "download the panorama photo and paste a direct link to that file, or upload it instead.",
+      });
+    }
+
+    const contentLength = Number(response.headers.get("content-length") || 0);
+    if (contentLength && contentLength > MAX_IMPORT_BYTES) {
+      return res.status(400).json({ error: "Image is too large (max 25MB)" });
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    if (arrayBuffer.byteLength > MAX_IMPORT_BYTES) {
+      return res.status(400).json({ error: "Image is too large (max 25MB)" });
+    }
+
+    const buffer = Buffer.from(arrayBuffer);
+    const ext = contentType.split("/")[1] || "jpg";
+    const originalname = `imported-${Date.now()}.${ext}`;
+
+    const ociUrl = await uploadToOracle({
+      originalname,
+      buffer,
+      mimetype: contentType,
+    });
+
+    res.json({ url: ociUrl });
+  } catch (error) {
+    console.error("IMPORT scene from URL error:", error);
+    res.status(500).json({ error: "Failed to import image from URL" });
   }
 });
 

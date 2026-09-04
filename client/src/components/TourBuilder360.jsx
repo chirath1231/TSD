@@ -407,6 +407,9 @@ export default function TourBuilder360({
   const [saving, setSaving] = useState(false);
   const [threeReady, setThreeReady] = useState(Boolean(window.THREE));
   const [threeLoadError, setThreeLoadError] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [sceneUrlInput, setSceneUrlInput] = useState('');
+  const [importingUrl, setImportingUrl] = useState(false);
 
   // ── Refs ───────────────────────────────────────────────────────────────────
   const canvasRef = useRef(null);
@@ -777,6 +780,42 @@ export default function TourBuilder360({
     }
   }, [loadTexture, updateStatus, showToast]);
 
+  // ── Import scene image from a direct URL ───────────────────────────────────
+  const importSceneFromUrl = useCallback(async () => {
+    const url = sceneUrlInput.trim();
+    if (!url) return;
+    if (!getCurrentScene()) { showToast('Add a scene first'); return; }
+
+    setImportingUrl(true);
+    try {
+      const { data } = await api.post("/tours/import-from-url", { url });
+
+      setScenes(prev => {
+        const next = prev.map(s => {
+          if (s.id !== currentSceneIdRef.current) return s;
+          const name = url.split('/').pop()?.split('?')[0]?.slice(0, 24) || s.name;
+          return { ...s, imageURL: data.url, imageData: data.url, name };
+        });
+        scenesRef.current = next;
+        const sc = next.find(s => s.id === currentSceneIdRef.current);
+        loadTexture(data.url);
+        updateStatus(next, currentSceneIdRef.current);
+        if (sc) {
+          setUploadLabel('✓ ' + sc.name);
+          setHasFile(true);
+          showToast(`Scene "${sc.name}" imported`);
+        }
+        return next;
+      });
+      setSceneUrlInput('');
+      setShowUrlInput(false);
+    } catch (error) {
+      showToast(error.response?.data?.error || "Failed to import image from URL");
+    } finally {
+      setImportingUrl(false);
+    }
+  }, [sceneUrlInput, getCurrentScene, loadTexture, updateStatus, showToast]);
+
   // ── Toggle add mode ────────────────────────────────────────────────────────
   const toggleAddMode = useCallback(() => {
     const sc = getCurrentScene();
@@ -975,6 +1014,39 @@ init();
             <input type="file" accept="image/*" ref={uploadRef} onChange={onFileChange} />
             <div className="tb-upload-label">{uploadLabel}</div>
           </div>
+
+          {!showUrlInput ? (
+            <button type="button" className="tb-btn ghost" onClick={() => setShowUrlInput(true)}>
+              🔗 Load from URL
+            </button>
+          ) : (
+            <>
+              <input
+                type="url"
+                value={sceneUrlInput}
+                onChange={(e) => setSceneUrlInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') importSceneFromUrl(); }}
+                placeholder="Direct image URL (.jpg/.png)"
+                style={{
+                  padding: '7px 12px',
+                  border: '1.5px solid var(--tb-border)',
+                  borderRadius: 8,
+                  fontSize: 12,
+                  minWidth: 220,
+                  outline: 'none',
+                }}
+                autoFocus
+              />
+              <button type="button" className="tb-btn primary" onClick={importSceneFromUrl} disabled={importingUrl}>
+                {importingUrl ? '...' : 'Import'}
+              </button>
+              <button
+                type="button"
+                className="tb-btn ghost"
+                onClick={() => { setShowUrlInput(false); setSceneUrlInput(''); }}
+              >✕</button>
+            </>
+          )}
 
           <div className="tb-sep" />
 
