@@ -845,8 +845,12 @@ export default function PropertyForm() {
               marginTop: -8,
             }}
           >
-            Add Insta360 or similar 360° view links and specify which room each
-            link represents.
+            Use "Create 360° Panorama" below to upload or import a panorama —
+            it displays directly on the property page. Only use the link box
+            below for tours that explicitly support embedding elsewhere;
+            Insta360 share links (cloud-sg.insta360.com/share/...) do{" "}
+            <strong>not</strong> support this and will show blank if pasted
+            here.
           </p>
 
           <div className="tour-list">
@@ -866,7 +870,7 @@ export default function PropertyForm() {
                   type="url"
                   value={tour.tour_url}
                   onChange={(e) => updateTour(i, "tour_url", e.target.value)}
-                  placeholder="https://cloud-sg.insta360.com/share/sg/..."
+                  placeholder="https://example.com/embeddable-tour (not an Insta360 share link)"
                 />
                 <button
                   type="button"
