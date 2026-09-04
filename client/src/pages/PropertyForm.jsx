@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../utils/api";
 import { toast } from "react-toastify";
 import { FiUpload, FiX, FiPlus, FiSave, FiArrowLeft } from "react-icons/fi";
-import TourBuilder360 from "../components/Tourbuilder360";
+import TourBuilder360 from "../components/TourBuilder360";
 
 const CATEGORIES = [
   { value: "short_term_rent", label: "Short Term Rent" },
