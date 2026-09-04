@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://tsdpropertiesinternational-production.up.railway.app/api/:path*"
+      "destination": "https://tsd-production-7ffc.up.railway.app/api/:path*"
     },
     {
       "source": "/uploads/:path*",
-      "destination": "https://tsdpropertiesinternational-production.up.railway.app/uploads/:path*"
+      "destination": "https://tsd-production-7ffc.up.railway.app/uploads/:path*"
     },
     {
       "source": "/(.*)",
