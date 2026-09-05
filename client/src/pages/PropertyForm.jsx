@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../utils/api";
 import { toast } from "react-toastify";
-import { FiUpload, FiX, FiPlus, FiSave, FiArrowLeft } from "react-icons/fi";
+import { FiUpload, FiX, FiPlus, FiSave, FiArrowLeft, FiLink } from "react-icons/fi";
 import TourBuilder360 from "../components/TourBuilder360";
 
 const CATEGORIES = [
@@ -102,6 +102,9 @@ export default function PropertyForm() {
   const [fetching, setFetching] = useState(isEdit);
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [showInlineTourBuilder, setShowInlineTourBuilder] = useState(false);
+  const [quickPanoRoomName, setQuickPanoRoomName] = useState(ROOM_OPTIONS[0]);
+  const [quickPanoUrl, setQuickPanoUrl] = useState("");
+  const [quickPanoLoading, setQuickPanoLoading] = useState(false);
 
   const getImageDraftStore = () => {
     if (!window.__tsdPropertyFormImageDrafts) {
@@ -359,6 +362,34 @@ export default function PropertyForm() {
       ];
     });
     toast.success("360° panorama linked from Tour Builder");
+  };
+
+  const handleQuickPanorama = async () => {
+    const url = quickPanoUrl.trim();
+    if (!url) {
+      toast.error("Paste a direct 360° image link first");
+      return;
+    }
+
+    setQuickPanoLoading(true);
+    try {
+      const { data } = await api.post("/tours/quick-panorama", {
+        property_id: isEdit ? Number(id) : null,
+        room_name: quickPanoRoomName,
+        image_url: url,
+      });
+      const tourUrl = `${window.location.origin}/api/tours/view/${data.tour_id}`;
+      setVirtualTours((prev) => [
+        ...prev,
+        { room_name: data.room_name, tour_url: tourUrl },
+      ]);
+      setQuickPanoUrl("");
+      toast.success("360° panorama fetched and added");
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to import panorama");
+    } finally {
+      setQuickPanoLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -852,6 +883,47 @@ export default function PropertyForm() {
             <strong>not</strong> support this and will show blank if pasted
             here.
           </p>
+
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              flexWrap: "wrap",
+              alignItems: "center",
+              marginBottom: 16,
+              padding: 12,
+              border: "1px dashed var(--border-color, #ccc)",
+              borderRadius: 8,
+            }}
+          >
+            <select
+              value={quickPanoRoomName}
+              onChange={(e) => setQuickPanoRoomName(e.target.value)}
+              style={{ flex: "0 0 auto" }}
+            >
+              {ROOM_OPTIONS.map((room) => (
+                <option key={room} value={room}>
+                  {room}
+                </option>
+              ))}
+            </select>
+            <input
+              type="url"
+              value={quickPanoUrl}
+              onChange={(e) => setQuickPanoUrl(e.target.value)}
+              placeholder="Paste a direct 360° image link (.jpg/.png) to fetch and add automatically"
+              style={{ flex: "1 1 260px" }}
+            />
+            <button
+              type="button"
+              className="add-tour-btn"
+              onClick={handleQuickPanorama}
+              disabled={quickPanoLoading}
+            >
+              <FiLink size={16} />{" "}
+              {quickPanoLoading ? "Fetching..." : "Fetch & Add Panorama"}
+            </button>
+          </div>
 
           <div className="tour-list">
             {virtualTours.map((tour, i) => (

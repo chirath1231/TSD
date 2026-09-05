@@ -154,88 +154,125 @@ router.post("/upload-scene", authMiddleware, upload.single("image"), async (req,
   }
 });
 
+/* Shared: fetch an image from an external URL and upload it to Oracle Cloud.
+ * Throws an Error with a `.status` (HTTP status to report) on any failure. */
+async function importImageFromUrl(url) {
+  if (!url || typeof url !== "string") {
+    throw Object.assign(new Error("url is required"), { status: 400 });
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw Object.assign(new Error("That's not a valid URL"), { status: 400 });
+  }
+  if (!["http:", "https:"].includes(parsed.protocol)) {
+    throw Object.assign(new Error("Only http/https URLs are supported"), { status: 400 });
+  }
+
+  let addresses;
+  try {
+    addresses = await dns.lookup(parsed.hostname, { all: true });
+  } catch {
+    throw Object.assign(new Error("Could not resolve that host"), { status: 400 });
+  }
+  if (!addresses.length || addresses.some((a) => isPrivateOrReservedIp(a.address))) {
+    throw Object.assign(new Error("That URL cannot be fetched"), { status: 400 });
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  let response;
+  try {
+    response = await fetch(parsed.toString(), {
+      signal: controller.signal,
+      redirect: "follow",
+    });
+  } catch {
+    throw Object.assign(new Error("Failed to fetch that URL"), { status: 400 });
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  if (!response.ok) {
+    throw Object.assign(
+      new Error(`The server at that URL responded with ${response.status}`),
+      { status: 400 }
+    );
+  }
+
+  const contentType = (response.headers.get("content-type") || "").split(";")[0].trim();
+  if (!contentType.startsWith("image/")) {
+    throw Object.assign(
+      new Error(
+        "That link doesn't point directly to an image file, so it can't be imported. " +
+          "Share/viewer pages (like an Insta360 cloud share link) aren't direct images — " +
+          "download the panorama photo and paste a direct link to that file, or upload it instead."
+      ),
+      { status: 400 }
+    );
+  }
+
+  const contentLength = Number(response.headers.get("content-length") || 0);
+  if (contentLength && contentLength > MAX_IMPORT_BYTES) {
+    throw Object.assign(new Error("Image is too large (max 25MB)"), { status: 400 });
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  if (arrayBuffer.byteLength > MAX_IMPORT_BYTES) {
+    throw Object.assign(new Error("Image is too large (max 25MB)"), { status: 400 });
+  }
+
+  const buffer = Buffer.from(arrayBuffer);
+  const ext = contentType.split("/")[1] || "jpg";
+  const originalname = `imported-${Date.now()}.${ext}`;
+
+  return uploadToOracle({
+    originalname,
+    buffer,
+    mimetype: contentType,
+  });
+}
+
 /* IMPORT SCENE IMAGE FROM A DIRECT URL */
 router.post("/import-from-url", authMiddleware, async (req, res) => {
   try {
-    const { url } = req.body;
-    if (!url || typeof url !== "string") {
-      return res.status(400).json({ error: "url is required" });
-    }
-
-    let parsed;
-    try {
-      parsed = new URL(url);
-    } catch {
-      return res.status(400).json({ error: "That's not a valid URL" });
-    }
-    if (!["http:", "https:"].includes(parsed.protocol)) {
-      return res.status(400).json({ error: "Only http/https URLs are supported" });
-    }
-
-    let addresses;
-    try {
-      addresses = await dns.lookup(parsed.hostname, { all: true });
-    } catch {
-      return res.status(400).json({ error: "Could not resolve that host" });
-    }
-    if (!addresses.length || addresses.some((a) => isPrivateOrReservedIp(a.address))) {
-      return res.status(400).json({ error: "That URL cannot be fetched" });
-    }
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-    let response;
-    try {
-      response = await fetch(parsed.toString(), {
-        signal: controller.signal,
-        redirect: "follow",
-      });
-    } catch {
-      return res.status(400).json({ error: "Failed to fetch that URL" });
-    } finally {
-      clearTimeout(timeout);
-    }
-
-    if (!response.ok) {
-      return res
-        .status(400)
-        .json({ error: `The server at that URL responded with ${response.status}` });
-    }
-
-    const contentType = (response.headers.get("content-type") || "").split(";")[0].trim();
-    if (!contentType.startsWith("image/")) {
-      return res.status(400).json({
-        error:
-          "That link doesn't point directly to an image file, so it can't be imported. " +
-          "Share/viewer pages (like an Insta360 cloud share link) aren't direct images — " +
-          "download the panorama photo and paste a direct link to that file, or upload it instead.",
-      });
-    }
-
-    const contentLength = Number(response.headers.get("content-length") || 0);
-    if (contentLength && contentLength > MAX_IMPORT_BYTES) {
-      return res.status(400).json({ error: "Image is too large (max 25MB)" });
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    if (arrayBuffer.byteLength > MAX_IMPORT_BYTES) {
-      return res.status(400).json({ error: "Image is too large (max 25MB)" });
-    }
-
-    const buffer = Buffer.from(arrayBuffer);
-    const ext = contentType.split("/")[1] || "jpg";
-    const originalname = `imported-${Date.now()}.${ext}`;
-
-    const ociUrl = await uploadToOracle({
-      originalname,
-      buffer,
-      mimetype: contentType,
-    });
-
+    const ociUrl = await importImageFromUrl(req.body.url);
     res.json({ url: ociUrl });
   } catch (error) {
+    if (error.status) return res.status(error.status).json({ error: error.message });
     console.error("IMPORT scene from URL error:", error);
     res.status(500).json({ error: "Failed to import image from URL" });
+  }
+});
+
+/* QUICK PANORAMA: fetch a 360 image link, store it in the cloud, and create a
+ * single-scene tour for it — skips the manual Tour Builder scene/hotspot flow. */
+router.post("/quick-panorama", authMiddleware, async (req, res) => {
+  try {
+    await ensureTourSchema();
+    const { property_id, room_name, image_url } = req.body;
+
+    const ociUrl = await importImageFromUrl(image_url);
+    const safeName = String(room_name || "360 Panorama").trim() || "360 Panorama";
+
+    const tourResult = await db.query(
+      "INSERT INTO tours (property_id, name) VALUES ($1,$2) RETURNING id",
+      [property_id || null, safeName]
+    );
+    const tourId = tourResult.rows[0].id;
+
+    await db.query(
+      "INSERT INTO tour_scenes (tour_id, scene_id, name, image_url) VALUES ($1,$2,$3,$4)",
+      [tourId, "scene-1", safeName, ociUrl]
+    );
+
+    res.json({ tour_id: tourId, room_name: safeName, image_url: ociUrl });
+  } catch (error) {
+    if (error.status) return res.status(error.status).json({ error: error.message });
+    console.error("QUICK panorama error:", error);
+    res.status(500).json({ error: "Failed to import panorama" });
   }
 });
 
