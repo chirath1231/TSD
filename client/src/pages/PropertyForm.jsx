@@ -877,11 +877,10 @@ export default function PropertyForm() {
             }}
           >
             Use "Create 360° Panorama" below to upload or import a panorama —
-            it displays directly on the property page. Only use the link box
-            below for tours that explicitly support embedding elsewhere;
-            Insta360 share links (cloud-sg.insta360.com/share/...) do{" "}
-            <strong>not</strong> support this and will show blank if pasted
-            here.
+            it displays directly on the property page. Any link pasted in the
+            box below (e.g. an Insta360 share link) will instead open in a
+            new tab on the property page, since most tour hosts don't allow
+            embedding elsewhere.
           </p>
 
           <div
