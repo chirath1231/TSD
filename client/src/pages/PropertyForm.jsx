@@ -311,7 +311,15 @@ export default function PropertyForm() {
   };
 
   const handleImageSelect = (e) => {
-    const files = Array.from(e.target.files);
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    const selected = Array.from(e.target.files);
+    const files = selected.filter((file) => allowedTypes.includes(file.type));
+    const rejected = selected.filter((file) => !allowedTypes.includes(file.type));
+    if (rejected.length > 0) {
+      toast.error(
+        `Skipped unsupported file(s): ${rejected.map((f) => f.name).join(", ")}. Use jpg, png or webp.`,
+      );
+    }
     const previews = files.map((file) => ({
       file,
       preview: URL.createObjectURL(file),

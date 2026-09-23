@@ -21,17 +21,33 @@ const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = /jpeg|jpg|png|webp/;
-    if (
-      allowed.test(path.extname(file.originalname).toLowerCase()) &&
-      allowed.test(file.mimetype)
-    ) {
+    const allowedMimes = ["image/jpeg", "image/jpg", "image/pjpeg", "image/png", "image/webp"];
+    const allowedExts = [".jpg", ".jpeg", ".jfif", ".png", ".webp"];
+    const ext = path.extname(file.originalname || "").toLowerCase();
+    if (allowedMimes.includes(file.mimetype) || allowedExts.includes(ext)) {
       cb(null, true);
     } else {
-      cb(new Error("Only image files (jpg, jpeg, png, webp) are allowed."));
+      const err = new Error(
+        `"${file.originalname}" is not supported. Only image files (jpg, jpeg, png, webp) are allowed.`,
+      );
+      err.status = 400;
+      cb(err);
     }
   },
 });
+
+// Run multer and return upload errors as JSON 400s instead of falling through to Express's default handler
+const uploadImages = (req, res, next) => {
+  upload.array("images", 20)(req, res, (err) => {
+    if (!err) return next();
+    const message =
+      err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE"
+        ? "Each image must be 10MB or smaller."
+        : err.message;
+    console.warn("Image upload rejected:", message);
+    res.status(err.status || 400).json({ error: message });
+  });
+};
 
 async function attachRelations(property) {
   const images = await db
@@ -159,7 +175,7 @@ router.get("/:id", authMiddleware, async (req, res) => {
 router.post(
   "/",
   authMiddleware,
-  upload.array("images", 20),
+  uploadImages,
   async (req, res) => {
     try {
       const d = req.body;
@@ -249,7 +265,7 @@ router.post(
 router.put(
   "/:id",
   authMiddleware,
-  upload.array("images", 20),
+  uploadImages,
   async (req, res) => {
     try {
       const { id } = req.params;
