@@ -782,6 +782,33 @@ tbody tr:last-child td {
   opacity: 0.75;
 }
 
+.image-section-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: -8px 0 16px;
+}
+
+.main-image-preview {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.main-image-preview img {
+  width: 100%;
+  max-width: 360px;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.main-image-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .image-count {
   font-size: 0.85rem;
   margin-top: 12px;

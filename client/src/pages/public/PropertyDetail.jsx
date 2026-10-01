@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation, Thumbs, Zoom, Pagination } from "swiper/modules";
+import { Navigation, Thumbs, Pagination, Keyboard } from "swiper/modules";
 import api from "../../utils/api";
 import { getContactForCategory } from "../../utils/contacts";
 import { toast } from "react-toastify";
@@ -14,6 +14,7 @@ import {
   FiSend,
   FiCheck,
   FiMaximize2,
+  FiImage,
   FiX,
   FiShare2,
   FiCopy,
@@ -24,7 +25,6 @@ import { BsBuildings, BsCameraFill } from "react-icons/bs";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/thumbs";
-import "swiper/css/zoom";
 import "swiper/css/pagination";
 
 // Tours created with the built-in "Create 360° Panorama" builder are served
@@ -169,6 +169,11 @@ export default function PropertyDetail() {
     : null;
   const selfHostedTourSrc = currentTour ? getSelfHostedTourSrc(currentTour.tour_url) : null;
   const catColors = CATEGORY_COLORS[property.category] || {};
+
+  const openLightbox = (index) => {
+    setLightboxIndex(index);
+    setShowLightbox(true);
+  };
   // Holiday lets are priced per night, like short term rentals
   const isNightly =
     property.category === "short_term_rent" || property.category === "holiday";
@@ -291,61 +296,55 @@ export default function PropertyDetail() {
               </p>
             </div>
 
-            {/* Image Gallery */}
+            {/* Image Gallery: main image, click to see all the other images */}
             {hasImages ? (
               <div className="detail-gallery">
-                <Swiper
-                  modules={[Navigation, Thumbs, Zoom, Pagination]}
-                  thumbs={{
-                    swiper:
-                      thumbsSwiper && !thumbsSwiper.destroyed
-                        ? thumbsSwiper
-                        : null,
-                  }}
-                  navigation
-                  zoom
-                  pagination={{ type: "fraction" }}
-                  spaceBetween={0}
-                  slidesPerView={1}
-                  className="detail-gallery-main"
+                <button
+                  type="button"
+                  className="detail-main-image"
+                  onClick={() => openLightbox(0)}
+                  aria-label="Open photo gallery"
                 >
-                  {property.images.map((img, i) => (
-                    <SwiperSlide key={i}>
-                      <div className="swiper-zoom-container">
-                        <img
-                          src={img.image_path}
-                          alt={`${property.building_name} - Image ${i + 1}`}
-                          loading="lazy"
-                        />
-                      </div>
-                      <button
-                        className="gallery-fullscreen-btn"
-                        onClick={() => {
-                          setLightboxIndex(i);
-                          setShowLightbox(true);
-                        }}
-                      >
-                        <FiMaximize2 size={18} />
-                      </button>
-                    </SwiperSlide>
-                  ))}
-                </Swiper>
+                  <img
+                    src={property.images[0].image_path}
+                    alt={`${property.building_name || "Property"} - main image`}
+                  />
+                  <span className="detail-main-image-badge">
+                    {property.images.length > 1 ? (
+                      <>
+                        <FiImage size={16} /> View all{" "}
+                        {property.images.length} photos
+                      </>
+                    ) : (
+                      <>
+                        <FiMaximize2 size={16} /> View photo
+                      </>
+                    )}
+                  </span>
+                </button>
 
                 {property.images.length > 1 && (
-                  <Swiper
-                    modules={[Thumbs]}
-                    onSwiper={setThumbsSwiper}
-                    slidesPerView={Math.min(6, property.images.length)}
-                    spaceBetween={8}
-                    watchSlidesProgress
-                    className="detail-gallery-thumbs"
-                  >
-                    {property.images.map((img, i) => (
-                      <SwiperSlide key={i}>
-                        <img src={img.image_path} alt="" loading="lazy" />
-                      </SwiperSlide>
-                    ))}
-                  </Swiper>
+                  <div className="detail-gallery-strip">
+                    {property.images.slice(1, 5).map((img, i) => {
+                      const hiddenCount = property.images.length - 5;
+                      const showMore = i === 3 && hiddenCount > 0;
+                      return (
+                        <button
+                          type="button"
+                          key={img.id ?? i}
+                          className="detail-gallery-strip-item"
+                          onClick={() => openLightbox(i + 1)}
+                        >
+                          <img src={img.image_path} alt="" loading="lazy" />
+                          {showMore && (
+                            <span className="detail-gallery-more">
+                              +{hiddenCount}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             ) : (
@@ -579,9 +578,16 @@ export default function PropertyDetail() {
               onClick={(e) => e.stopPropagation()}
             >
               <Swiper
-                modules={[Navigation, Pagination]}
+                modules={[Navigation, Pagination, Thumbs, Keyboard]}
                 navigation
+                keyboard
                 pagination={{ type: "fraction" }}
+                thumbs={{
+                  swiper:
+                    thumbsSwiper && !thumbsSwiper.destroyed
+                      ? thumbsSwiper
+                      : null,
+                }}
                 initialSlide={lightboxIndex}
                 spaceBetween={0}
                 slidesPerView={1}
@@ -593,6 +599,22 @@ export default function PropertyDetail() {
                   </SwiperSlide>
                 ))}
               </Swiper>
+              {property.images.length > 1 && (
+                <Swiper
+                  modules={[Thumbs]}
+                  onSwiper={setThumbsSwiper}
+                  slidesPerView="auto"
+                  spaceBetween={8}
+                  watchSlidesProgress
+                  className="lightbox-thumbs"
+                >
+                  {property.images.map((img, i) => (
+                    <SwiperSlide key={i}>
+                      <img src={img.image_path} alt="" loading="lazy" />
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+              )}
             </motion.div>
           </motion.div>
         )}

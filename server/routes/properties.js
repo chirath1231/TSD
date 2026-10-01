@@ -38,16 +38,39 @@ const upload = multer({
 
 // Run multer and return upload errors as JSON 400s instead of falling through to Express's default handler
 const uploadImages = (req, res, next) => {
-  upload.array("images", 20)(req, res, (err) => {
+  upload.fields([
+    { name: "main_image", maxCount: 1 },
+    { name: "images", maxCount: 20 },
+  ])(req, res, (err) => {
     if (!err) return next();
-    const message =
-      err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE"
-        ? "Each image must be 10MB or smaller."
-        : err.message;
+    let message = err.message;
+    if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
+      message = "Each image must be 10MB or smaller.";
+    } else if (
+      err instanceof multer.MulterError &&
+      err.code === "LIMIT_UNEXPECTED_FILE"
+    ) {
+      message = "Upload one main image and up to 20 more images at a time.";
+    }
     console.warn("Image upload rejected:", message);
     res.status(err.status || 400).json({ error: message });
   });
 };
+
+// Make sure a property with images always has exactly one main (primary) image
+async function ensurePrimaryImage(propertyId) {
+  const primary = await db
+    .prepare(
+      "SELECT id FROM property_images WHERE property_id = $1 AND is_primary = 1 LIMIT 1",
+    )
+    .get(propertyId);
+  if (primary) return;
+  await db
+    .prepare(
+      "UPDATE property_images SET is_primary = 1 WHERE id = (SELECT id FROM property_images WHERE property_id = $1 ORDER BY id ASC LIMIT 1)",
+    )
+    .run(propertyId);
+}
 
 async function attachRelations(property) {
   const images = await db
@@ -230,20 +253,21 @@ router.post(
 
       const propertyId = result?.rows?.[0]?.id;
 
-      if (req.files && req.files.length > 0) {
-        for (let i = 0; i < req.files.length; i++) {
-          const file = req.files[i];
+      // The main image (if given) goes first and becomes the primary image;
+      // otherwise the first of the other images is used as the main one
+      const mainFile = req.files?.main_image?.[0];
+      const otherFiles = req.files?.images || [];
+      const orderedFiles = mainFile ? [mainFile, ...otherFiles] : otherFiles;
+      for (let i = 0; i < orderedFiles.length; i++) {
+        const imageUrl = await uploadToOracle(orderedFiles[i]);
 
-          const imageUrl = await uploadToOracle(file);
-
-          await db.prepare(
-            "INSERT INTO property_images (property_id, image_path, is_primary) VALUES ($1, $2, $3)"
-          ).run(
-            propertyId,  // 🔥 NOW NOT NULL
-            imageUrl,
-            i === 0 ? 1 : 0
-          );
-        }
+        await db.prepare(
+          "INSERT INTO property_images (property_id, image_path, is_primary) VALUES ($1, $2, $3)"
+        ).run(
+          propertyId,  // 🔥 NOW NOT NULL
+          imageUrl,
+          i === 0 ? 1 : 0
+        );
       }
 
       if (virtualTours.length > 0) {
@@ -327,15 +351,29 @@ router.put(
           id,
         );
 
-      if (req.files && req.files.length > 0) {
-        for (const file of req.files) {
-          const imageUrl = await uploadToOracle(file);
-          await db
-            .prepare(
-              "INSERT INTO property_images (property_id, image_path, is_primary) VALUES ($1, $2, $3)",
-            )
-            .run(id, imageUrl, 0);
-        }
+      // A newly uploaded main image replaces the current main image
+      const mainFile = req.files?.main_image?.[0];
+      if (mainFile) {
+        const imageUrl = await uploadToOracle(mainFile);
+        await db
+          .prepare(
+            "UPDATE property_images SET is_primary = 0 WHERE property_id = $1",
+          )
+          .run(id);
+        await db
+          .prepare(
+            "INSERT INTO property_images (property_id, image_path, is_primary) VALUES ($1, $2, $3)",
+          )
+          .run(id, imageUrl, 1);
+      }
+
+      for (const file of req.files?.images || []) {
+        const imageUrl = await uploadToOracle(file);
+        await db
+          .prepare(
+            "INSERT INTO property_images (property_id, image_path, is_primary) VALUES ($1, $2, $3)",
+          )
+          .run(id, imageUrl, 0);
       }
 
       if (d.removed_images) {
@@ -359,6 +397,8 @@ router.put(
           }
         }
       }
+
+      await ensurePrimaryImage(id);
 
       await db
         .prepare("DELETE FROM virtual_tours WHERE property_id = $1")

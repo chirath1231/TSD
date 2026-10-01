@@ -95,6 +95,7 @@ export default function PropertyForm() {
   const { id } = useParams();
   const navigate = useNavigate();
   const fileInputRef = useRef();
+  const mainInputRef = useRef();
   const hasHydratedDraftRef = useRef(false);
   const consumedCreatedTourRef = useRef(false);
   const isEdit = Boolean(id);
@@ -104,7 +105,9 @@ export default function PropertyForm() {
 
   const [form, setForm] = useState(INITIAL_FORM);
   const [newImages, setNewImages] = useState([]);
+  const [mainImage, setMainImage] = useState(null);
   const [dragActive, setDragActive] = useState(false);
+  const [mainDragActive, setMainDragActive] = useState(false);
   const [existingImages, setExistingImages] = useState([]);
   const [removedImageIds, setRemovedImageIds] = useState([]);
   const [virtualTours, setVirtualTours] = useState([]);
@@ -116,6 +119,15 @@ export default function PropertyForm() {
   const [quickPanoUrl, setQuickPanoUrl] = useState("");
   const [quickPanoLoading, setQuickPanoLoading] = useState(false);
 
+  // The saved main image is the primary one (or the first, for older properties).
+  // Once a new main image is picked, the old one is kept as one of the "more" images.
+  const savedMain =
+    existingImages.find((img) => Number(img.is_primary) === 1) ||
+    existingImages[0] ||
+    null;
+  const existingMain = mainImage ? null : savedMain;
+  const existingOthers = existingImages.filter((img) => img !== existingMain);
+
   const getImageDraftStore = () => {
     if (!window.__tsdPropertyFormImageDrafts) {
       window.__tsdPropertyFormImageDrafts = {};
@@ -125,7 +137,10 @@ export default function PropertyForm() {
 
   const persistDraft = () => {
     const imageDraftStore = getImageDraftStore();
-    imageDraftStore[draftKey] = newImages.map(({ file }) => file);
+    imageDraftStore[draftKey] = {
+      main: mainImage?.file || null,
+      others: newImages.map(({ file }) => file),
+    };
     const payload = {
       form,
       virtualTours,
@@ -158,13 +173,20 @@ export default function PropertyForm() {
         setRemovedImageIds(draft.removedImageIds);
       }
       const imageDraftStore = getImageDraftStore();
-      const cachedFiles = imageDraftStore[draftKey];
-      if (Array.isArray(cachedFiles) && cachedFiles.length) {
-        const restored = cachedFiles.map((file) => ({
+      const cached = imageDraftStore[draftKey];
+      const cachedOthers = Array.isArray(cached) ? cached : cached?.others;
+      if (Array.isArray(cachedOthers) && cachedOthers.length) {
+        const restored = cachedOthers.map((file) => ({
           file,
           preview: URL.createObjectURL(file),
         }));
         setNewImages(restored);
+      }
+      if (cached?.main) {
+        setMainImage({
+          file: cached.main,
+          preview: URL.createObjectURL(cached.main),
+        });
       }
     } catch {
       // Ignore invalid draft payloads
@@ -184,6 +206,7 @@ export default function PropertyForm() {
     existingImages,
     removedImageIds,
     newImages,
+    mainImage,
   ]);
 
   useEffect(() => {
@@ -322,7 +345,8 @@ export default function PropertyForm() {
     }
   };
 
-  const addImageFiles = (fileList) => {
+  // Drops unsupported or oversized files (with a toast) and returns the rest
+  const filterImageFiles = (fileList) => {
     const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
     const selected = Array.from(fileList || []);
     let files = selected.filter((file) => allowedTypes.includes(file.type));
@@ -339,6 +363,11 @@ export default function PropertyForm() {
       );
       files = files.filter((file) => file.size <= MAX_IMAGE_SIZE);
     }
+    return files;
+  };
+
+  const addImageFiles = (fileList) => {
+    let files = filterImageFiles(fileList);
     const slotsLeft = MAX_NEW_IMAGES - newImages.length;
     if (files.length > slotsLeft) {
       toast.error(
@@ -362,6 +391,35 @@ export default function PropertyForm() {
     e.preventDefault();
     setDragActive(false);
     addImageFiles(e.dataTransfer.files);
+  };
+
+  const setMainImageFile = (fileList) => {
+    const [file] = filterImageFiles(fileList);
+    if (!file) return;
+    setMainImage((prev) => {
+      if (prev) URL.revokeObjectURL(prev.preview);
+      return { file, preview: URL.createObjectURL(file) };
+    });
+  };
+
+  const handleMainImageSelect = (e) => {
+    setMainImageFile(e.target.files);
+    e.target.value = "";
+  };
+
+  const handleMainImageDrop = (e) => {
+    e.preventDefault();
+    setMainDragActive(false);
+    setMainImageFile(e.dataTransfer.files);
+  };
+
+  const removeMainImage = () => {
+    if (mainImage) {
+      URL.revokeObjectURL(mainImage.preview);
+      setMainImage(null);
+    } else if (existingMain) {
+      removeExistingImage(existingMain.id);
+    }
   };
 
   const removeNewImage = (index) => {
@@ -454,6 +512,7 @@ export default function PropertyForm() {
         }
       });
 
+      if (mainImage) formData.append("main_image", mainImage.file);
       newImages.forEach(({ file }) => formData.append("images", file));
 
       const validTours = virtualTours.filter((t) => t.tour_url.trim());
@@ -487,11 +546,16 @@ export default function PropertyForm() {
     }
   };
 
+  const previewsRef = useRef([]);
+  previewsRef.current = [
+    ...newImages.map((img) => img.preview),
+    ...(mainImage ? [mainImage.preview] : []),
+  ];
   useEffect(() => {
     return () => {
-      newImages.forEach((img) => URL.revokeObjectURL(img.preview));
+      previewsRef.current.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [newImages]);
+  }, []);
 
   if (fetching) {
     return (
@@ -860,9 +924,73 @@ export default function PropertyForm() {
           </div>
         </div>
 
-        {/* Images */}
+        {/* Main Image */}
         <div className="form-card">
-          <h3>Property Images</h3>
+          <h3>Property Main Image</h3>
+          <p className="image-section-desc">
+            This is the cover photo shown on property cards. Visitors click it
+            to see all the other images.
+          </p>
+          {mainImage || existingMain ? (
+            <div className="main-image-preview">
+              <img
+                src={mainImage ? mainImage.preview : existingMain.image_path}
+                alt="Main"
+              />
+              <div className="main-image-actions">
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={() => mainInputRef.current?.click()}
+                >
+                  <FiUpload size={14} /> Change
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={removeMainImage}
+                >
+                  <FiX size={14} /> Remove
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div
+              className={`image-upload-area${mainDragActive ? " drag-active" : ""}`}
+              onClick={() => mainInputRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setMainDragActive(true);
+              }}
+              onDragLeave={() => setMainDragActive(false)}
+              onDrop={handleMainImageDrop}
+            >
+              <FiUpload size={28} />
+              <p>
+                <strong>Click to select the main image</strong> or drag &amp;
+                drop it here
+              </p>
+              <p className="image-upload-hint">
+                One image — JPG, PNG, WebP, max 10MB.
+              </p>
+            </div>
+          )}
+          <input
+            type="file"
+            ref={mainInputRef}
+            hidden
+            accept="image/*"
+            onChange={handleMainImageSelect}
+          />
+        </div>
+
+        {/* More Images */}
+        <div className="form-card">
+          <h3>More Images</h3>
+          <p className="image-section-desc">
+            Add the other photos of this property (rooms, garden, view…). They
+            open when visitors click the main image.
+          </p>
           <div
             className={`image-upload-area${dragActive ? " drag-active" : ""}`}
             onClick={() => fileInputRef.current?.click()}
@@ -892,17 +1020,16 @@ export default function PropertyForm() {
             accept="image/*"
             onChange={handleImageSelect}
           />
-          {(existingImages.length > 0 || newImages.length > 0) && (
+          {(existingOthers.length > 0 || newImages.length > 0) && (
             <p className="image-count">
-              {existingImages.length + newImages.length} image
-              {existingImages.length + newImages.length === 1 ? "" : "s"}{" "}
-              selected
+              {existingOthers.length + newImages.length} more image
+              {existingOthers.length + newImages.length === 1 ? "" : "s"}
             </p>
           )}
 
-          {(existingImages.length > 0 || newImages.length > 0) && (
+          {(existingOthers.length > 0 || newImages.length > 0) && (
             <div className="image-preview-grid">
-              {existingImages.map((img) => (
+              {existingOthers.map((img) => (
                 <div key={img.id} className="image-preview-item">
                   <img src={img.image_path} alt="" />
                   <button
