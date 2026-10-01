@@ -98,6 +98,9 @@ export default function PublicFooter() {
                 <Link to="/browse/short_term_rent">Short Term Rentals</Link>
               </li>
               <li>
+                <Link to="/browse/holiday">Holiday Lets</Link>
+              </li>
+              <li>
                 <Link to="/browse/long_term_rent">Long Term Rentals</Link>
               </li>
               <li>

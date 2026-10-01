@@ -46,6 +46,7 @@ function getSelfHostedTourSrc(url) {
 
 const CATEGORY_LABELS = {
   short_term_rent: "Short Term Rental",
+  holiday: "Holiday Let",
   long_term_rent: "Long Term Rental",
   sale: "For Sale",
 };
@@ -59,6 +60,7 @@ const TYPE_LABELS = {
 
 const CATEGORY_COLORS = {
   short_term_rent: { bg: "#fef3c7", text: "#92400e" },
+  holiday: { bg: "#fce7f3", text: "#9d174d" },
   long_term_rent: { bg: "#dbeafe", text: "#1e40af" },
   sale: { bg: "#d1fae5", text: "#065f46" },
 };
@@ -167,6 +169,9 @@ export default function PropertyDetail() {
     : null;
   const selfHostedTourSrc = currentTour ? getSelfHostedTourSrc(currentTour.tour_url) : null;
   const catColors = CATEGORY_COLORS[property.category] || {};
+  // Holiday lets are priced per night, like short term rentals
+  const isNightly =
+    property.category === "short_term_rent" || property.category === "holiday";
 
   const getPrice = () => {
     if (property.category === "sale")
@@ -174,7 +179,7 @@ export default function PropertyDetail() {
         main: "Rs. " + Number(property.sale_price || 0).toLocaleString(),
         label: "Sale Price",
       };
-    if (property.category === "short_term_rent")
+    if (isNightly)
       return {
         main: "Rs. " + Number(property.per_night_rate || 0).toLocaleString(),
         label: "Per Night",
@@ -216,14 +221,14 @@ export default function PropertyDetail() {
         ? property.max_occupancy +
           (property.max_occupancy === 1 ? " person" : " people")
         : null,
-      show: property.category === "short_term_rent" && property.max_occupancy,
+      show: isNightly && property.max_occupancy,
     },
     {
       label: "Minimum Stay",
       value: property.min_stay
         ? property.min_stay + (property.min_stay === 1 ? " night" : " nights")
         : null,
-      show: property.category === "short_term_rent" && property.min_stay,
+      show: isNightly && property.min_stay,
     },
     {
       label: "Furnishing",
@@ -500,7 +505,7 @@ export default function PropertyDetail() {
             <div className="detail-price-card">
               <p className="detail-price-label">{priceInfo.label}</p>
               <h2 className="detail-price-value">{priceInfo.main}</h2>
-              {property.category === "short_term_rent" &&
+              {isNightly &&
                 property.rent_per_month && (
                   <p className="detail-price-sub">
                     Monthly: Rs.{" "}

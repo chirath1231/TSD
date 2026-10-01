@@ -14,7 +14,7 @@ async function initDB() {
 
       CREATE TABLE IF NOT EXISTS properties (
         id SERIAL PRIMARY KEY,
-        category TEXT NOT NULL CHECK(category IN ('short_term_rent', 'long_term_rent', 'sale')),
+        category TEXT NOT NULL CHECK(category IN ('short_term_rent', 'holiday', 'long_term_rent', 'sale')),
         property_type TEXT NOT NULL CHECK(property_type IN ('apartment', 'house', 'commercial', 'land')),
         building_name TEXT,
         location TEXT,
@@ -73,6 +73,30 @@ async function initDB() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE SET NULL
       );
+    `);
+
+    // Existing databases were created before the 'holiday' category existed —
+    // replace the old category CHECK constraint so holiday properties can be saved
+    await db.query(`
+      DO $$
+      DECLARE c RECORD;
+      DECLARE dropped BOOLEAN := false;
+      BEGIN
+        FOR c IN
+          SELECT conname FROM pg_constraint
+          WHERE conrelid = 'properties'::regclass
+            AND contype = 'c'
+            AND pg_get_constraintdef(oid) LIKE '%category%'
+            AND pg_get_constraintdef(oid) NOT LIKE '%holiday%'
+        LOOP
+          EXECUTE format('ALTER TABLE properties DROP CONSTRAINT %I', c.conname);
+          dropped := true;
+        END LOOP;
+        IF dropped THEN
+          ALTER TABLE properties ADD CONSTRAINT properties_category_check
+            CHECK (category IN ('short_term_rent', 'holiday', 'long_term_rent', 'sale'));
+        END IF;
+      END $$;
     `);
 
     // Check if default admin exists

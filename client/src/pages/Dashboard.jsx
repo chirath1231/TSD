@@ -8,11 +8,13 @@ import {
   FiPlusCircle,
   FiArrowRight,
   FiMapPin,
+  FiSun,
 } from "react-icons/fi";
 import { BsBuildings } from "react-icons/bs";
 
 const CATEGORY_LABELS = {
   short_term_rent: "Short Term Rent",
+  holiday: "Holiday",
   long_term_rent: "Long Term Rent",
   sale: "Sale",
 };
@@ -63,6 +65,15 @@ export default function Dashboard() {
           <div className="stat-info">
             <h3>{stats?.shortTerm || 0}</h3>
             <p>Short Term Rentals</p>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon gold">
+            <FiSun size={24} />
+          </div>
+          <div className="stat-info">
+            <h3>{stats?.holiday || 0}</h3>
+            <p>Holiday Lets</p>
           </div>
         </div>
         <div className="stat-card">

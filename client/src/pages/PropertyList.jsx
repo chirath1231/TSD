@@ -13,6 +13,7 @@ import { BsBuildings } from "react-icons/bs";
 
 const CATEGORY_LABELS = {
   short_term_rent: "Short Term Rent",
+  holiday: "Holiday",
   long_term_rent: "Long Term Rent",
   sale: "Sale",
 };
@@ -78,7 +79,7 @@ export default function PropertyList() {
 
   const getPrice = (p) => {
     if (p.category === "sale") return formatPrice(p.sale_price);
-    if (p.category === "short_term_rent")
+    if (p.category === "short_term_rent" || p.category === "holiday")
       return formatPrice(p.per_night_rate) + "/night";
     if (p.category === "long_term_rent")
       return formatPrice(p.rent_per_month) + "/mo";
@@ -97,7 +98,7 @@ export default function PropertyList() {
       <div className="table-container">
         <div className="table-toolbar">
           <div className="table-toolbar-left">
-            {["", "short_term_rent", "long_term_rent", "sale"].map((cat) => (
+            {["", "short_term_rent", "holiday", "long_term_rent", "sale"].map((cat) => (
               <button
                 key={cat}
                 className={`filter-btn ${categoryFilter === cat ? "active" : ""}`}

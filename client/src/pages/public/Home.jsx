@@ -19,6 +19,7 @@ import {
   FiClock,
   FiPhone,
   FiStar,
+  FiSun,
 } from "react-icons/fi";
 import {
   BsBuildings,
@@ -66,7 +67,7 @@ function PropertyCard({ prop }) {
   const getPrice = () => {
     if (prop.category === "sale")
       return "Rs. " + Number(prop.sale_price || 0).toLocaleString();
-    if (prop.category === "short_term_rent")
+    if (prop.category === "short_term_rent" || prop.category === "holiday")
       return (
         "Rs. " + Number(prop.per_night_rate || 0).toLocaleString() + " /night"
       );
@@ -76,14 +77,18 @@ function PropertyCard({ prop }) {
   const categoryLabel =
     prop.category === "short_term_rent"
       ? "Short Term"
-      : prop.category === "long_term_rent"
+      : prop.category === "holiday"
+        ? "Holiday"
+        : prop.category === "long_term_rent"
         ? "Long Term"
         : "For Sale";
 
   const categoryColor =
     prop.category === "short_term_rent"
       ? "#f59e0b"
-      : prop.category === "long_term_rent"
+      : prop.category === "holiday"
+        ? "#ec4899"
+        : prop.category === "long_term_rent"
         ? "#3b82f6"
         : "#10b981";
 
@@ -164,9 +169,16 @@ export default function Home() {
     {
       key: "short_term_rent",
       title: "Short Term Rentals",
-      desc: "Holiday homes, Airbnb-style stays, and furnished apartments for short visits.",
+      desc: "Airbnb-style stays and furnished apartments for short visits.",
       icon: <FiClock size={28} />,
       color: "#f59e0b",
+    },
+    {
+      key: "holiday",
+      title: "Holiday Lets",
+      desc: "Holiday homes, villas, and getaway stays for your next vacation.",
+      icon: <FiSun size={28} />,
+      color: "#ec4899",
     },
     {
       key: "long_term_rent",

@@ -18,13 +18,16 @@ import { BsBuildings, BsCameraFill } from "react-icons/bs";
 
 const CATEGORY_TITLES = {
   short_term_rent: "Short Term Rentals",
+  holiday: "Holiday Lets",
   long_term_rent: "Long Term Rentals",
   sale: "Properties for Sale",
 };
 
 const CATEGORY_DESCRIPTIONS = {
   short_term_rent:
-    "Find the perfect short-stay accommodation — holiday homes, serviced apartments, and more.",
+    "Find the perfect short-stay accommodation — serviced apartments, furnished homes, and more.",
+  holiday:
+    "Relax in beautiful holiday homes, villas, and apartments — perfect for your next getaway.",
   long_term_rent:
     "Browse monthly and yearly rental properties — apartments, houses, and commercial spaces.",
   sale: "Explore properties for sale — land, apartments, houses, and commercial buildings.",
@@ -32,6 +35,7 @@ const CATEGORY_DESCRIPTIONS = {
 
 const PROPERTY_TYPES = {
   short_term_rent: ["apartment", "house"],
+  holiday: ["apartment", "house"],
   long_term_rent: ["apartment", "house", "commercial"],
   sale: ["apartment", "house", "land", "commercial"],
 };
@@ -45,7 +49,7 @@ function PropertyCard({ prop, category, viewMode }) {
   const getPrice = () => {
     if (category === "sale")
       return "Rs. " + Number(prop.sale_price || 0).toLocaleString();
-    if (category === "short_term_rent")
+    if (category === "short_term_rent" || category === "holiday")
       return (
         "Rs. " + Number(prop.per_night_rate || 0).toLocaleString() + " / night"
       );

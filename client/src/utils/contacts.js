@@ -13,7 +13,7 @@ export const LONG_TERM_SALES_CONTACT = {
 export const CONTACTS = [SHORT_TERM_CONTACT, LONG_TERM_SALES_CONTACT];
 
 export function getContactForCategory(category) {
-  return category === "short_term_rent"
+  return category === "short_term_rent" || category === "holiday"
     ? SHORT_TERM_CONTACT
     : LONG_TERM_SALES_CONTACT;
 }

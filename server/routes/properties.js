@@ -121,6 +121,11 @@ router.get("/stats/summary", authMiddleware, async (req, res) => {
       .get("short_term_rent");
     const shortTerm = shortTermRes?.count || 0;
 
+    const holidayRes = await db
+      .prepare("SELECT COUNT(*) as count FROM properties WHERE category = $1")
+      .get("holiday");
+    const holiday = holidayRes?.count || 0;
+
     const longTermRes = await db
       .prepare("SELECT COUNT(*) as count FROM properties WHERE category = $1")
       .get("long_term_rent");
@@ -144,6 +149,7 @@ router.get("/stats/summary", authMiddleware, async (req, res) => {
     res.json({
       total,
       shortTerm,
+      holiday,
       longTerm,
       sale,
       active,

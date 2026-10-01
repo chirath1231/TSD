@@ -11,12 +11,17 @@ const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 
 const CATEGORIES = [
   { value: "short_term_rent", label: "Short Term Rent" },
+  { value: "holiday", label: "Holiday" },
   { value: "long_term_rent", label: "Long Term Rent" },
   { value: "sale", label: "Sale" },
 ];
 
 const PROPERTY_TYPES = {
   short_term_rent: [
+    { value: "apartment", label: "Apartment" },
+    { value: "house", label: "House" },
+  ],
+  holiday: [
     { value: "apartment", label: "Apartment" },
     { value: "house", label: "House" },
   ],
@@ -264,6 +269,8 @@ export default function PropertyForm() {
     const { category, property_type } = form;
     const isLand = property_type === "land";
     const isCommercial = property_type === "commercial";
+    // Holiday lets are priced per night, like short term rentals
+    const isNightly = category === "short_term_rent" || category === "holiday";
 
     switch (field) {
       case "building_name":
@@ -277,18 +284,18 @@ export default function PropertyForm() {
         return !isLand;
       case "story_type":
         return (
-          (category === "short_term_rent" || category === "long_term_rent") &&
+          (isNightly || category === "long_term_rent") &&
           !isLand &&
           !isCommercial
         );
       case "max_occupancy":
         return category !== "sale" && !isLand;
       case "min_stay":
-        return category === "short_term_rent";
+        return isNightly;
       case "per_night_rate":
       case "per_week_rate":
       case "per_month_rate":
-        return category === "short_term_rent";
+        return isNightly;
       case "furnished":
         return (
           category === "long_term_rent" || (category === "sale" && !isLand)

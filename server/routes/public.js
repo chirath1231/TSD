@@ -111,12 +111,14 @@ router.get("/properties", async (req, res) => {
     }
 
     // Price filtering based on category
-    if (min_price && category === "short_term_rent") {
+    const nightlyPriced =
+      category === "short_term_rent" || category === "holiday";
+    if (min_price && nightlyPriced) {
       query += `AND per_night_rate >= $${paramCount} `;
       params.push(Number(min_price));
       paramCount++;
     }
-    if (max_price && category === "short_term_rent") {
+    if (max_price && nightlyPriced) {
       query += `AND per_night_rate <= $${paramCount} `;
       params.push(Number(max_price));
       paramCount++;
