@@ -7,6 +7,10 @@ import CountUp from "react-countup";
 import { useInView as useCountInView } from "react-intersection-observer";
 import api from "../../utils/api";
 import {
+  SHORT_TERM_CONTACT,
+  LONG_TERM_SALES_CONTACT,
+} from "../../utils/contacts";
+import {
   FiArrowRight,
   FiSearch,
   FiMapPin,
@@ -257,7 +261,7 @@ export default function Home() {
             >
               <FiSearch size={18} /> Explore Properties
             </Link>
-            <a href="tel:+94112345678" className="hero-btn hero-btn-outline">
+            <a href="#contact" className="hero-btn hero-btn-outline">
               <FiPhone size={18} /> Contact Us
             </a>
           </motion.div>
@@ -466,10 +470,17 @@ export default function Home() {
                 Start Browsing <FiArrowRight size={18} />
               </Link>
               <a
-                href="tel:+94112345678"
+                href={`tel:${SHORT_TERM_CONTACT.tel}`}
                 className="hero-btn hero-btn-outline-dark"
               >
-                <FiPhone size={18} /> Call Now
+                <FiPhone size={18} /> Holiday Lets: {SHORT_TERM_CONTACT.display}
+              </a>
+              <a
+                href={`tel:${LONG_TERM_SALES_CONTACT.tel}`}
+                className="hero-btn hero-btn-outline-dark"
+              >
+                <FiPhone size={18} /> Long Term & Sales:{" "}
+                {LONG_TERM_SALES_CONTACT.display}
               </a>
             </div>
           </motion.div>

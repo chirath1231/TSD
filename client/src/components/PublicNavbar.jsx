@@ -3,6 +3,11 @@ import { BsBuildings } from "react-icons/bs";
 import { FiMenu, FiX, FiPhone, FiMail, FiChevronDown } from "react-icons/fi";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  CONTACTS,
+  SHORT_TERM_CONTACT,
+  LONG_TERM_SALES_CONTACT,
+} from "../utils/contacts";
 
 const NAV_LINKS = [
   { to: "/", label: "Home" },
@@ -31,15 +36,24 @@ export default function PublicNavbar() {
     return location.pathname.startsWith(path);
   };
 
+  // "Call Now" goes to the team for the section being browsed
+  const ctaContact =
+    location.pathname.startsWith("/browse/long_term_rent") ||
+    location.pathname.startsWith("/browse/sale")
+      ? LONG_TERM_SALES_CONTACT
+      : SHORT_TERM_CONTACT;
+
   return (
     <>
       {/* Top Bar */}
       <div className="top-bar">
         <div className="top-bar-inner section-container">
           <div className="top-bar-left">
-            <a href="tel:+94112345678">
-              <FiPhone size={12} /> +94 11 234 5678
-            </a>
+            {CONTACTS.map((c) => (
+              <a href={`tel:${c.tel}`} key={c.tel} title={c.label}>
+                <FiPhone size={12} /> {c.label}: {c.display}
+              </a>
+            ))}
             <a href="mailto:info@tsdproperty.com">
               <FiMail size={12} /> info@tsdproperty.com
             </a>
@@ -85,7 +99,11 @@ export default function PublicNavbar() {
           </div>
 
           {/* Contact CTA */}
-          <a href="tel:+94112345678" className="navbar-cta">
+          <a
+            href={`tel:${ctaContact.tel}`}
+            className="navbar-cta"
+            title={`${ctaContact.label}: ${ctaContact.display}`}
+          >
             <FiPhone size={15} /> Call Now
           </a>
 
@@ -158,9 +176,15 @@ export default function PublicNavbar() {
                 ))}
               </div>
               <div className="mobile-menu-footer">
-                <a href="tel:+94112345678" className="mobile-menu-cta">
-                  <FiPhone size={18} /> +94 11 234 5678
-                </a>
+                {CONTACTS.map((c) => (
+                  <a
+                    href={`tel:${c.tel}`}
+                    className="mobile-menu-cta"
+                    key={c.tel}
+                  >
+                    <FiPhone size={18} /> {c.label}: {c.display}
+                  </a>
+                ))}
                 <a
                   href="mailto:info@tsdproperty.com"
                   className="mobile-menu-cta secondary"

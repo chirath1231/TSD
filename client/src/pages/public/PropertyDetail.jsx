@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Thumbs, Zoom, Pagination } from "swiper/modules";
 import api from "../../utils/api";
+import { getContactForCategory } from "../../utils/contacts";
 import { toast } from "react-toastify";
 import {
   FiChevronLeft,
@@ -517,9 +518,12 @@ export default function PropertyDetail() {
             {/* Contact Card */}
             <div className="detail-contact-card">
               <h3>Contact TSD Property Solutions</h3>
-              <a href="tel:+94112345678" className="detail-contact-item">
+              <a
+                href={`tel:${getContactForCategory(property.category).tel}`}
+                className="detail-contact-item"
+              >
                 <FiPhone size={18} />
-                <span>+94 11 234 5678</span>
+                <span>{getContactForCategory(property.category).display}</span>
               </a>
               <a
                 href="mailto:info@tsdproperty.com"

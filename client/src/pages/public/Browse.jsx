@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useSearchParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "../../utils/api";
+import { getContactForCategory } from "../../utils/contacts";
 import {
   FiSliders,
   FiMapPin,
@@ -11,6 +12,7 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiArrowRight,
+  FiPhone,
 } from "react-icons/fi";
 import { BsBuildings, BsCameraFill } from "react-icons/bs";
 
@@ -257,6 +259,15 @@ export default function Browse() {
           >
             <h1>{CATEGORY_TITLES[category] || "Properties"}</h1>
             <p>{CATEGORY_DESCRIPTIONS[category] || ""}</p>
+            {CATEGORY_TITLES[category] && (
+              <a
+                href={`tel:${getContactForCategory(category).tel}`}
+                className="browse-header-phone"
+              >
+                <FiPhone size={15} /> Call{" "}
+                {getContactForCategory(category).display}
+              </a>
+            )}
           </motion.div>
         </div>
       </div>

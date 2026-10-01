@@ -8,6 +8,7 @@ import {
   FiArrowRight,
 } from "react-icons/fi";
 import { BsBuildings } from "react-icons/bs";
+import { CONTACTS } from "../utils/contacts";
 
 export default function PublicFooter() {
   return (
@@ -92,7 +93,7 @@ export default function PublicFooter() {
           </div>
 
           {/* Contact */}
-          <div className="footer-section">
+          <div className="footer-section" id="contact">
             <h4>Get In Touch</h4>
             <div className="footer-contact">
               <div className="footer-contact-item">
@@ -103,10 +104,16 @@ export default function PublicFooter() {
                   Jayavardhapura, Sri Lanka 10100
                 </span>
               </div>
-              <div className="footer-contact-item">
-                <FiPhone size={16} />
-                <a href="tel:+94112345678">+94 11 234 5678</a>
-              </div>
+              {CONTACTS.map((c) => (
+                <div className="footer-contact-item" key={c.tel}>
+                  <FiPhone size={16} />
+                  <span>
+                    {c.label}
+                    <br />
+                    <a href={`tel:${c.tel}`}>{c.display}</a>
+                  </span>
+                </div>
+              ))}
               <div className="footer-contact-item">
                 <FiMail size={16} />
                 <a href="mailto:info@tsdproperty.com">info@tsdproperty.com</a>

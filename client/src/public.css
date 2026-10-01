@@ -859,6 +859,21 @@
   opacity: 0.85;
   max-width: 600px;
 }
+.browse-header-phone {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 8px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+.browse-header-phone:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
 .browse-content {
   padding: 32px 0 64px;
 }
