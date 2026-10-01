@@ -31,15 +31,15 @@ import "swiper/css/pagination";
 // Anything else is a link an admin pasted in manually — most third-party
 // tour hosts (Insta360 included) block iframing via their own CSP, so
 // rather than guessing per-host we just open those in a new tab.
-function isSelfHostedTourUrl(url) {
+// The saved URL includes whichever domain the admin built the tour on
+// (localhost, a preview deployment, ...), so match on the path only and
+// load it through the current site's /api proxy.
+function getSelfHostedTourSrc(url) {
   try {
-    const { origin, pathname } = new URL(url, window.location.origin);
-    return (
-      origin === window.location.origin &&
-      pathname.startsWith("/api/tours/view/")
-    );
+    const { pathname } = new URL(url, window.location.origin);
+    return pathname.startsWith("/api/tours/view/") ? pathname : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -164,6 +164,7 @@ export default function PropertyDetail() {
   const currentTour = hasTours
     ? property.virtual_tours[selectedTourIndex]
     : null;
+  const selfHostedTourSrc = currentTour ? getSelfHostedTourSrc(currentTour.tour_url) : null;
   const catColors = CATEGORY_COLORS[property.category] || {};
 
   const getPrice = () => {
@@ -355,7 +356,7 @@ export default function PropertyDetail() {
                   <BsCameraFill size={22} /> 360° Virtual Tours
                 </h2>
                 <div className="detail-tour-viewer">
-                  {!isSelfHostedTourUrl(currentTour.tour_url) ? (
+                  {!selfHostedTourSrc ? (
                     <div
                       style={{
                         display: "flex",
@@ -389,7 +390,7 @@ export default function PropertyDetail() {
                   ) : (
                     <>
                       <iframe
-                        src={currentTour.tour_url}
+                        src={selfHostedTourSrc}
                         title={`360° Tour - ${currentTour.room_name}`}
                         allowFullScreen
                         sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation"
