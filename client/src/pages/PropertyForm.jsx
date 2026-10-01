@@ -5,6 +5,10 @@ import { toast } from "react-toastify";
 import { FiUpload, FiX, FiPlus, FiSave, FiArrowLeft, FiLink } from "react-icons/fi";
 import TourBuilder360 from "../components/TourBuilder360";
 
+// Matches the server: multer accepts up to 20 files of 10MB each per request
+const MAX_NEW_IMAGES = 20;
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+
 const CATEGORIES = [
   { value: "short_term_rent", label: "Short Term Rent" },
   { value: "long_term_rent", label: "Long Term Rent" },
@@ -95,6 +99,7 @@ export default function PropertyForm() {
 
   const [form, setForm] = useState(INITIAL_FORM);
   const [newImages, setNewImages] = useState([]);
+  const [dragActive, setDragActive] = useState(false);
   const [existingImages, setExistingImages] = useState([]);
   const [removedImageIds, setRemovedImageIds] = useState([]);
   const [virtualTours, setVirtualTours] = useState([]);
@@ -310,22 +315,46 @@ export default function PropertyForm() {
     }
   };
 
-  const handleImageSelect = (e) => {
+  const addImageFiles = (fileList) => {
     const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-    const selected = Array.from(e.target.files);
-    const files = selected.filter((file) => allowedTypes.includes(file.type));
+    const selected = Array.from(fileList || []);
+    let files = selected.filter((file) => allowedTypes.includes(file.type));
     const rejected = selected.filter((file) => !allowedTypes.includes(file.type));
     if (rejected.length > 0) {
       toast.error(
         `Skipped unsupported file(s): ${rejected.map((f) => f.name).join(", ")}. Use jpg, png or webp.`,
       );
     }
+    const tooBig = files.filter((file) => file.size > MAX_IMAGE_SIZE);
+    if (tooBig.length > 0) {
+      toast.error(
+        `Skipped file(s) over 10MB: ${tooBig.map((f) => f.name).join(", ")}`,
+      );
+      files = files.filter((file) => file.size <= MAX_IMAGE_SIZE);
+    }
+    const slotsLeft = MAX_NEW_IMAGES - newImages.length;
+    if (files.length > slotsLeft) {
+      toast.error(
+        `You can upload up to ${MAX_NEW_IMAGES} new images at a time. Extra images were skipped.`,
+      );
+      files = files.slice(0, Math.max(slotsLeft, 0));
+    }
     const previews = files.map((file) => ({
       file,
       preview: URL.createObjectURL(file),
     }));
     setNewImages((prev) => [...prev, ...previews]);
+  };
+
+  const handleImageSelect = (e) => {
+    addImageFiles(e.target.files);
     e.target.value = "";
+  };
+
+  const handleImageDrop = (e) => {
+    e.preventDefault();
+    setDragActive(false);
+    addImageFiles(e.dataTransfer.files);
   };
 
   const removeNewImage = (index) => {
@@ -828,20 +857,41 @@ export default function PropertyForm() {
         <div className="form-card">
           <h3>Property Images</h3>
           <div
-            className="image-upload-area"
+            className={`image-upload-area${dragActive ? " drag-active" : ""}`}
             onClick={() => fileInputRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragActive(true);
+            }}
+            onDragLeave={() => setDragActive(false)}
+            onDrop={handleImageDrop}
           >
             <FiUpload size={28} />
-            <p>Click to upload images (JPG, PNG, WebP — max 10MB each)</p>
+            <p>
+              <strong>Click to select images</strong> or drag &amp; drop them
+              here
+            </p>
+            <p className="image-upload-hint">
+              You can select several images at once (hold Ctrl / Cmd or Shift,
+              or tap multiple photos on mobile) and keep adding more. JPG, PNG,
+              WebP — max 10MB each, up to {MAX_NEW_IMAGES} per save.
+            </p>
           </div>
           <input
             type="file"
             ref={fileInputRef}
             hidden
             multiple
-            accept="image/jpeg,image/jpg,image/png,image/webp"
+            accept="image/*"
             onChange={handleImageSelect}
           />
+          {(existingImages.length > 0 || newImages.length > 0) && (
+            <p className="image-count">
+              {existingImages.length + newImages.length} image
+              {existingImages.length + newImages.length === 1 ? "" : "s"}{" "}
+              selected
+            </p>
+          )}
 
           {(existingImages.length > 0 || newImages.length > 0) && (
             <div className="image-preview-grid">
@@ -858,7 +908,7 @@ export default function PropertyForm() {
                 </div>
               ))}
               {newImages.map((img, i) => (
-                <div key={`new-${i}`} className="image-preview-item">
+                <div key={img.preview} className="image-preview-item">
                   <img src={img.preview} alt="" />
                   <button
                     type="button"
@@ -869,6 +919,14 @@ export default function PropertyForm() {
                   </button>
                 </div>
               ))}
+              <button
+                type="button"
+                className="image-preview-item image-add-more"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <FiPlus size={22} />
+                <span>Add more</span>
+              </button>
             </div>
           )}
         </div>

@@ -770,6 +770,44 @@ tbody tr:last-child td {
   font-size: 0.85rem;
 }
 
+.image-upload-area.drag-active {
+  border-color: var(--primary);
+  background: var(--primary-50);
+  color: var(--primary);
+}
+
+.image-upload-area .image-upload-hint {
+  font-size: 0.78rem;
+  margin-top: 6px;
+  opacity: 0.75;
+}
+
+.image-count {
+  font-size: 0.85rem;
+  margin-top: 12px;
+  color: var(--text-secondary);
+}
+
+.image-add-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-style: dashed;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: var(--transition);
+}
+
+.image-add-more:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-50);
+}
+
 .image-preview-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
