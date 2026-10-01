@@ -10,10 +10,43 @@ import {
 import { BsBuildings } from "react-icons/bs";
 import { CONTACTS } from "../utils/contacts";
 
+// Edit this text to describe what TSD Property Solutions does
+const WHAT_WE_DO = [
+  {
+    title: "Short Term & Holiday Lets",
+    text: "Fully furnished holiday homes and apartments for short stays, with hassle-free booking and guest support.",
+  },
+  {
+    title: "Long Term Rentals",
+    text: "Quality homes, apartments and commercial spaces for long term tenants, matched to your needs and budget.",
+  },
+  {
+    title: "Property Sales",
+    text: "Helping you buy or sell houses, apartments and land across Sri Lanka with honest advice from start to finish.",
+  },
+  {
+    title: "Property Management",
+    text: "We look after your property for you — tenants, maintenance and rent collection — so you can relax.",
+  },
+];
+
 export default function PublicFooter() {
   return (
     <footer className="public-footer">
       <div className="section-container">
+        {/* What We Do */}
+        <div className="footer-what-we-do">
+          <h4>What We Do</h4>
+          <div className="footer-what-we-do-grid">
+            {WHAT_WE_DO.map((item) => (
+              <div key={item.title} className="footer-what-we-do-item">
+                <h5>{item.title}</h5>
+                <p>{item.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Main Footer Grid */}
         <div className="footer-grid">
           {/* Brand */}
