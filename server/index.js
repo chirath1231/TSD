@@ -38,18 +38,18 @@ app.get("/api/test", (req, res) => {
 /* =========================
    START SERVER
 ========================= */
+// Listen first so the host gets a response even if the DB is down,
+// instead of a 502 "Application failed to respond".
 async function startServer() {
+  app.listen(PORT, () => {
+    console.log(`✓ Server running on port ${PORT}`);
+  });
+
   try {
     await initDB();
     console.log("✓ Database initialized");
-
-    app.listen(PORT, () => {
-      console.log(`✓ Server running on port ${PORT}`);
-    });
-
   } catch (error) {
-    console.error("Failed to start server:", error);
-    process.exit(1);
+    console.error("✗ Database initialization failed:", error.message);
   }
 }
 

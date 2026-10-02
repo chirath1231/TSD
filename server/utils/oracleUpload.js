@@ -1,14 +1,9 @@
-const objectStorage = require("oci-objectstorage");
-const provider = require("../config/oci");
-
-const client = new objectStorage.ObjectStorageClient({
-  authenticationDetailsProvider: provider,
-});
-
-const namespaceName = process.env.OCI_NAMESPACE;
-const bucketName = process.env.OCI_BUCKET;
+const { getObjectStorageClient } = require("../config/oci");
 
 async function uploadToOracle(file) {
+  const client = getObjectStorageClient();
+  const namespaceName = process.env.OCI_NAMESPACE;
+  const bucketName = process.env.OCI_BUCKET;
   const objectName = Date.now() + "-" + file.originalname;
 
   await client.putObject({

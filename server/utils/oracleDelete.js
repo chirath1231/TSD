@@ -1,12 +1,4 @@
-const objectStorage = require("oci-objectstorage");
-const provider = require("../config/oci");
-
-const client = new objectStorage.ObjectStorageClient({
-  authenticationDetailsProvider: provider,
-});
-
-const namespaceName = process.env.OCI_NAMESPACE;
-const bucketName = process.env.OCI_BUCKET;
+const { getObjectStorageClient } = require("../config/oci");
 
 async function deleteFromOracle(fileUrl) {
   try {
@@ -14,9 +6,9 @@ async function deleteFromOracle(fileUrl) {
     const parts = fileUrl.split("/o/");
     const objectName = parts[1]; // everything after /o/
 
-    await client.deleteObject({
-      namespaceName: namespaceName, // ✅ FIXED
-      bucketName: bucketName,
+    await getObjectStorageClient().deleteObject({
+      namespaceName: process.env.OCI_NAMESPACE,
+      bucketName: process.env.OCI_BUCKET,
       objectName: objectName,
     });
 

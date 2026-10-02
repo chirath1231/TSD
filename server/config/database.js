@@ -9,6 +9,7 @@ const pool = new Pool({
   ssl: {
     rejectUnauthorized: false, // Required for Railway.app
   },
+  connectionTimeoutMillis: 10000, // fail fast instead of hanging forever if the DB is unreachable
 });
 
 pool.on("error", (err) => {
