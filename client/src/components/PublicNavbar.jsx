@@ -49,12 +49,8 @@ export default function PublicNavbar() {
       {/* Top Bar */}
       <div className="top-bar">
         <div className="top-bar-inner section-container">
+          {/* Phone numbers live on each category's page header, not here */}
           <div className="top-bar-left">
-            {CONTACTS.map((c) => (
-              <a href={`tel:${c.tel}`} key={c.tel} title={c.label}>
-                <FiPhone size={12} /> {c.label}: {c.display}
-              </a>
-            ))}
             <a href="mailto:info@tsdproperty.com">
               <FiMail size={12} /> info@tsdproperty.com
             </a>
