@@ -115,6 +115,8 @@ export default function PropertyForm() {
   const [fetching, setFetching] = useState(isEdit);
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [showInlineTourBuilder, setShowInlineTourBuilder] = useState(false);
+  const [tourBuilderUnsaved, setTourBuilderUnsaved] = useState(false);
+  const [tourSaveHighlight, setTourSaveHighlight] = useState(0);
   const [quickPanoRoomName, setQuickPanoRoomName] = useState(ROOM_OPTIONS[0]);
   const [quickPanoUrl, setQuickPanoUrl] = useState("");
   const [quickPanoLoading, setQuickPanoLoading] = useState(false);
@@ -499,6 +501,12 @@ export default function PropertyForm() {
 
     if (!form.category || !form.property_type) {
       toast.error("Please select category and property type");
+      return;
+    }
+
+    if (showInlineTourBuilder && tourBuilderUnsaved) {
+      toast.error('Click "Save to Cloud" in the 360° builder before saving the property');
+      setTourSaveHighlight((n) => n + 1);
       return;
     }
 
@@ -1179,6 +1187,8 @@ export default function PropertyForm() {
                 linkedPropertyId={isEdit ? Number(id) : null}
                 onTourLinked={handleInlineTourLinked}
                 onClose={() => setShowInlineTourBuilder(false)}
+                onUnsavedChange={setTourBuilderUnsaved}
+                highlightSaveSignal={tourSaveHighlight}
               />
             </div>
           )}

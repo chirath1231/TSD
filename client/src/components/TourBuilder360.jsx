@@ -112,6 +112,11 @@ const STYLES = `
 .tb-status-pill.active-mode { border-color: var(--tb-danger); color: var(--tb-danger); animation: tb-pulse 1.2s infinite; }
 
 @keyframes tb-pulse { 0%,100%{opacity:1}50%{opacity:.5} }
+@keyframes tb-attention {
+  0%,100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(212,168,67,.9); }
+  50% { transform: scale(1.08); box-shadow: 0 0 0 8px rgba(212,168,67,0); }
+}
+.tb-btn.tb-attention { background: var(--tb-accent); color: #1a1a2e; animation: tb-attention .8s ease-in-out 4; }
 
 /* SCENE TABS */
 .tb-scene-bar {
@@ -378,6 +383,8 @@ export default function TourBuilder360({
   onTourLinked,
   onClose,
   linkedPropertyId: linkedPropertyIdProp,
+  onUnsavedChange,
+  highlightSaveSignal = 0,
 }) {
   injectStyles();
   const navigate = useNavigate();
@@ -410,6 +417,9 @@ export default function TourBuilder360({
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [sceneUrlInput, setSceneUrlInput] = useState('');
   const [importingUrl, setImportingUrl] = useState(false);
+  const [savedScenes, setSavedScenes] = useState(null);
+  const [highlightSave, setHighlightSave] = useState(false);
+  const saveBtnRef = useRef(null);
 
   // ── Refs ───────────────────────────────────────────────────────────────────
   const canvasRef = useRef(null);
@@ -969,6 +979,7 @@ init();
         "tsd_created_tour",
         JSON.stringify({ room_name: roomName, tour_url: tourUrl })
       );
+      setSavedScenes(scenes);
       const linkedTour = { room_name: roomName, tour_url: tourUrl };
       showToast("Tour saved and linked to Property Form");
       if (onTourLinked) {
@@ -983,6 +994,24 @@ init();
       setSaving(false);
     }
   }, [scenes, showToast, navigate, returnTo, linkedPropertyId, onTourLinked, onClose]);
+
+  // ── Unsaved-work tracking (lets the Property Form block submit) ─────────
+  const hasUnsavedScenes =
+    scenes.some((s) => s.imageURL) && scenes !== savedScenes;
+
+  useEffect(() => {
+    if (onUnsavedChange) onUnsavedChange(hasUnsavedScenes);
+  }, [hasUnsavedScenes, onUnsavedChange]);
+
+  useEffect(() => () => onUnsavedChange?.(false), [onUnsavedChange]);
+
+  useEffect(() => {
+    if (!highlightSaveSignal) return;
+    saveBtnRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlightSave(true);
+    const t = setTimeout(() => setHighlightSave(false), 3200);
+    return () => clearTimeout(t);
+  }, [highlightSaveSignal]);
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const currentScene = scenes.find(s => s.id === currentSceneId) || null;
@@ -1015,7 +1044,7 @@ init();
             <div className="tb-upload-label">{uploadLabel}</div>
           </div>
 
-          {!showUrlInput ? (
+          {embedded ? null : !showUrlInput ? (
             <button type="button" className="tb-btn ghost" onClick={() => setShowUrlInput(true)}>
               🔗 Load from URL
             </button>
@@ -1054,8 +1083,16 @@ init();
             {adding ? '✕ Cancel' : '＋ Add Hotspot'}
           </button>
           <button type="button" className="tb-btn ghost" onClick={() => setPanelOpen(p => !p)}>☰ Scenes</button>
-          <button type="button" className="tb-btn ghost" onClick={exportTour}>⬇ Export HTML</button>
-          <button type="button" className="tb-btn primary" onClick={saveTourToCloud} disabled={saving}>
+          {!embedded && (
+            <button type="button" className="tb-btn ghost" onClick={exportTour}>⬇ Export HTML</button>
+          )}
+          <button
+            type="button"
+            ref={saveBtnRef}
+            className={`tb-btn primary${highlightSave ? ' tb-attention' : ''}`}
+            onClick={saveTourToCloud}
+            disabled={saving}
+          >
             {saving ? "Saving..." : "Save to Cloud"}
           </button>
 
