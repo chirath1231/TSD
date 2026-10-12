@@ -414,9 +414,6 @@ export default function TourBuilder360({
   const [saving, setSaving] = useState(false);
   const [threeReady, setThreeReady] = useState(Boolean(window.THREE));
   const [threeLoadError, setThreeLoadError] = useState(false);
-  const [showUrlInput, setShowUrlInput] = useState(false);
-  const [sceneUrlInput, setSceneUrlInput] = useState('');
-  const [importingUrl, setImportingUrl] = useState(false);
   const [savedScenes, setSavedScenes] = useState(null);
   const [highlightSave, setHighlightSave] = useState(false);
   const saveBtnRef = useRef(null);
@@ -790,42 +787,6 @@ export default function TourBuilder360({
     }
   }, [loadTexture, updateStatus, showToast]);
 
-  // ── Import scene image from a direct URL ───────────────────────────────────
-  const importSceneFromUrl = useCallback(async () => {
-    const url = sceneUrlInput.trim();
-    if (!url) return;
-    if (!getCurrentScene()) { showToast('Add a scene first'); return; }
-
-    setImportingUrl(true);
-    try {
-      const { data } = await api.post("/tours/import-from-url", { url });
-
-      setScenes(prev => {
-        const next = prev.map(s => {
-          if (s.id !== currentSceneIdRef.current) return s;
-          const name = url.split('/').pop()?.split('?')[0]?.slice(0, 24) || s.name;
-          return { ...s, imageURL: data.url, imageData: data.url, name };
-        });
-        scenesRef.current = next;
-        const sc = next.find(s => s.id === currentSceneIdRef.current);
-        loadTexture(data.url);
-        updateStatus(next, currentSceneIdRef.current);
-        if (sc) {
-          setUploadLabel('✓ ' + sc.name);
-          setHasFile(true);
-          showToast(`Scene "${sc.name}" imported`);
-        }
-        return next;
-      });
-      setSceneUrlInput('');
-      setShowUrlInput(false);
-    } catch (error) {
-      showToast(error.response?.data?.error || "Failed to import image from URL");
-    } finally {
-      setImportingUrl(false);
-    }
-  }, [sceneUrlInput, getCurrentScene, loadTexture, updateStatus, showToast]);
-
   // ── Toggle add mode ────────────────────────────────────────────────────────
   const toggleAddMode = useCallback(() => {
     const sc = getCurrentScene();
@@ -895,42 +856,6 @@ export default function TourBuilder360({
       else showToast('Target scene not found');
     } else showToast('No destination configured');
   }, [switchScene, showToast]);
-
-  // ── Export HTML ────────────────────────────────────────────────────────────
-  const exportTour = useCallback(() => {
-    if (!scenes.length) { showToast('No scenes to export'); return; }
-    const scenesJson = JSON.stringify(scenes.map(sc => ({ id: sc.id, name: sc.name, imageData: sc.imageData, hotspots: sc.hotspots })));
-    const html = `<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>360° Virtual Tour</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#f3f4f8;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;height:100vh;overflow:hidden;color:#1a1a2e}#wrap{position:relative;width:100%;height:100%;cursor:grab}#wrap:active{cursor:grabbing}#canvas{display:block;width:100%;height:100%}#hl{position:absolute;inset:0;pointer-events:none}.hs{position:absolute;transform:translate(-50%,-50%);pointer-events:all;cursor:pointer}.hs-btn{display:flex;align-items:center;gap:7px;padding:8px 14px;background:rgba(27,67,50,.92);border:2px solid #d4a843;border-radius:30px;font-size:13px;color:#fff;cursor:pointer;backdrop-filter:blur(8px);box-shadow:0 10px 24px rgba(27,67,50,.25);white-space:nowrap;transition:all .2s}.hs-btn:hover{background:#2d6a4f;color:#fff}.dot{width:8px;height:8px;border-radius:50%;background:#d4a843;flex-shrink:0;transition:background .2s}.hs-btn:hover .dot{background:#fff}#scene-bar{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:10}.stab{padding:7px 16px;border-radius:20px;border:1px solid #e5e7eb;background:#fff;font-size:12px;color:#6b7280;cursor:pointer;transition:all .2s}.stab.active{border-color:#1b4332;color:#1b4332;background:#e8f5ed}</style>
-</head><body>
-<div id="scene-bar"></div>
-<div id="wrap"><canvas id="canvas"></canvas><div id="hl"></div></div>
-<script>
-const SCENES=${scenesJson};
-let renderer,scene3d,camera,sphere,curId=SCENES[0]?.id;
-let cameraLon=0,cameraLat=0,fov=75,dragging=false,moved=false;
-let startX,startY,startLon,startLat;
-function init(){const canvas=document.getElementById('canvas');renderer=new THREE.WebGLRenderer({canvas,antialias:true});renderer.setPixelRatio(devicePixelRatio);scene3d=new THREE.Scene();camera=new THREE.PerspectiveCamera(fov,innerWidth/innerHeight,.1,1000);const geo=new THREE.SphereGeometry(500,60,40);geo.scale(-1,1,1);sphere=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0xf3f4f8}));scene3d.add(sphere);resize();window.addEventListener('resize',resize);bindInput();animate();renderTabs();if(SCENES.length)switchScene(SCENES[0].id);}
-function resize(){renderer.setSize(innerWidth,innerHeight);if(camera){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();}updateHSPos();}
-function animate(){requestAnimationFrame(animate);const lat=Math.max(-85,Math.min(85,cameraLat)),phi=THREE.MathUtils.degToRad(90-lat),theta=THREE.MathUtils.degToRad(cameraLon);camera.lookAt(new THREE.Vector3(500*Math.sin(phi)*Math.cos(theta),500*Math.cos(phi),500*Math.sin(phi)*Math.sin(theta)));renderer.render(scene3d,camera);updateHSPos();}
-function switchScene(id){curId=id;const sc=SCENES.find(s=>s.id===id);if(sc&&sc.imageData){new THREE.TextureLoader().load(sc.imageData,t=>{sphere.material=new THREE.MeshBasicMaterial({map:t});});}renderTabs();renderHS();}
-function renderTabs(){const bar=document.getElementById('scene-bar');bar.innerHTML='';SCENES.forEach(sc=>{const d=document.createElement('div');d.className='stab'+(sc.id===curId?' active':'');d.textContent=sc.name;d.onclick=()=>switchScene(sc.id);bar.appendChild(d);});}
-function renderHS(){const hl=document.getElementById('hl');hl.innerHTML='';const sc=SCENES.find(s=>s.id===curId);if(!sc)return;sc.hotspots.forEach(hs=>{const el=document.createElement('div');el.className='hs';el.id='h'+hs.id;el.innerHTML='<div class="hs-btn"><span class="dot"></span>'+hs.icon+' '+hs.label+'</div>';el.onclick=()=>{if(hs.linkType==='url'&&hs.url)window.open(hs.url,'_blank');else if(hs.targetSceneId){const t=SCENES.find(s=>s.id===hs.targetSceneId);if(t)switchScene(t.id);}};hl.appendChild(el);});updateHSPos();}
-function lonLatToScreen(lon,lat){const phi=THREE.MathUtils.degToRad(90-lat),theta=THREE.MathUtils.degToRad(lon);const v=new THREE.Vector3(500*Math.sin(phi)*Math.cos(theta),500*Math.cos(phi),500*Math.sin(phi)*Math.sin(theta));v.project(camera);return{x:(v.x+1)/2*innerWidth,y:(-v.y+1)/2*innerHeight,behind:v.z>1};}
-function updateHSPos(){const sc=SCENES.find(s=>s.id===curId);if(!sc)return;sc.hotspots.forEach(hs=>{const el=document.getElementById('h'+hs.id);if(!el)return;const p=lonLatToScreen(hs.lon,hs.lat);el.style.left=p.x+'px';el.style.top=p.y+'px';el.style.display=p.behind?'none':'';});}
-function bindInput(){const w=document.getElementById('wrap');w.addEventListener('mousedown',e=>{if(e.target.closest('.hs'))return;dragging=true;moved=false;startX=e.clientX;startY=e.clientY;startLon=cameraLon;startLat=cameraLat;});window.addEventListener('mousemove',e=>{if(!dragging)return;const dx=e.clientX-startX,dy=e.clientY-startY;if(Math.abs(dx)>3||Math.abs(dy)>3)moved=true;cameraLon=startLon-dx*.2;cameraLat=startLat+dy*.2;});window.addEventListener('mouseup',()=>{dragging=false;});w.addEventListener('wheel',e=>{fov=Math.max(30,Math.min(100,fov+e.deltaY*.05));camera.fov=fov;camera.updateProjectionMatrix();},{passive:true});let tx,ty,tlon,tlat;w.addEventListener('touchstart',e=>{if(e.touches.length===1){tx=e.touches[0].clientX;ty=e.touches[0].clientY;tlon=cameraLon;tlat=cameraLat;}},{passive:true});w.addEventListener('touchmove',e=>{if(e.touches.length===1){cameraLon=tlon-(e.touches[0].clientX-tx)*.2;cameraLat=tlat+(e.touches[0].clientY-ty)*.2;}},{passive:true});}
-init();
-<\/script></body></html>`;
-    const blob = new Blob([html], { type: 'text/html' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = '360-tour.html';
-    a.click();
-    showToast('Tour exported as 360-tour.html ✓');
-  }, [scenes, showToast]);
 
   // ── Save tour to backend (OCI + Postgres) ─────────────────────────────────
   const saveTourToCloud = useCallback(async () => {
@@ -1044,38 +969,6 @@ init();
             <div className="tb-upload-label">{uploadLabel}</div>
           </div>
 
-          {embedded ? null : !showUrlInput ? (
-            <button type="button" className="tb-btn ghost" onClick={() => setShowUrlInput(true)}>
-              🔗 Load from URL
-            </button>
-          ) : (
-            <>
-              <input
-                type="url"
-                value={sceneUrlInput}
-                onChange={(e) => setSceneUrlInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') importSceneFromUrl(); }}
-                placeholder="Direct image URL (.jpg/.png)"
-                style={{
-                  padding: '7px 12px',
-                  border: '1.5px solid var(--tb-border)',
-                  borderRadius: 8,
-                  fontSize: 12,
-                  minWidth: 220,
-                  outline: 'none',
-                }}
-                autoFocus
-              />
-              <button type="button" className="tb-btn primary" onClick={importSceneFromUrl} disabled={importingUrl}>
-                {importingUrl ? '...' : 'Import'}
-              </button>
-              <button
-                type="button"
-                className="tb-btn ghost"
-                onClick={() => { setShowUrlInput(false); setSceneUrlInput(''); }}
-              >✕</button>
-            </>
-          )}
 
           <div className="tb-sep" />
 
@@ -1083,9 +976,6 @@ init();
             {adding ? '✕ Cancel' : '＋ Add Hotspot'}
           </button>
           <button type="button" className="tb-btn ghost" onClick={() => setPanelOpen(p => !p)}>☰ Scenes</button>
-          {!embedded && (
-            <button type="button" className="tb-btn ghost" onClick={exportTour}>⬇ Export HTML</button>
-          )}
           <button
             type="button"
             ref={saveBtnRef}
