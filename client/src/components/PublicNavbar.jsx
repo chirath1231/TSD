@@ -12,7 +12,7 @@ import {
 const NAV_LINKS = [
   { to: "/", label: "Home" },
   { to: "/browse/short_term_rent", label: "Short Term" },
-  { to: "/browse/holiday", label: "Holiday" },
+  { to: "/browse/holiday", label: "Holiday Lets" },
   { to: "/browse/long_term_rent", label: "Long Term" },
   { to: "/browse/sale", label: "For Sale" },
 ];

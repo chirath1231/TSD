@@ -14,7 +14,7 @@ import { BsBuildings } from "react-icons/bs";
 
 const CATEGORY_LABELS = {
   short_term_rent: "Short Term Rent",
-  holiday: "Holiday",
+  holiday: "Holiday Lets",
   long_term_rent: "Long Term Rent",
   sale: "Sale",
 };

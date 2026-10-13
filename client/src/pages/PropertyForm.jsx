@@ -11,7 +11,7 @@ const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 
 const CATEGORIES = [
   { value: "short_term_rent", label: "Short Term Rent" },
-  { value: "holiday", label: "Holiday" },
+  { value: "holiday", label: "Holiday Lets" },
   { value: "long_term_rent", label: "Long Term Rent" },
   { value: "sale", label: "Sale" },
 ];

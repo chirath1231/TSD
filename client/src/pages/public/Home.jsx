@@ -78,7 +78,7 @@ function PropertyCard({ prop }) {
     prop.category === "short_term_rent"
       ? "Short Term"
       : prop.category === "holiday"
-        ? "Holiday"
+        ? "Holiday Lets"
         : prop.category === "long_term_rent"
         ? "Long Term"
         : "For Sale";
