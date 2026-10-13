@@ -54,6 +54,7 @@ const CATEGORY_LABELS = {
 const TYPE_LABELS = {
   apartment: "Apartment",
   house: "House",
+  villa: "Villa",
   commercial: "Commercial Space",
   land: "Land",
 };
@@ -177,6 +178,9 @@ export default function PropertyDetail() {
   // Holiday lets are priced per night, like short term rentals
   const isNightly =
     property.category === "short_term_rent" || property.category === "holiday";
+  const isVilla = property.property_type === "villa";
+  const formatRate = (value) =>
+    value ? "Rs. " + Number(value).toLocaleString() + " / night" : null;
 
   const getPrice = () => {
     if (property.category === "sale")
@@ -186,8 +190,12 @@ export default function PropertyDetail() {
       };
     if (isNightly)
       return {
-        main: "Rs. " + Number(property.per_night_rate || 0).toLocaleString(),
-        label: "Per Night",
+        main:
+          "Rs. " +
+          Number(
+            (isVilla ? property.villa_rate : property.per_night_rate) || 0,
+          ).toLocaleString(),
+        label: isVilla ? "Full Villa Per Night" : "Per Night",
       };
     return {
       main: "Rs. " + Number(property.rent_per_month || 0).toLocaleString(),
@@ -204,7 +212,7 @@ export default function PropertyDetail() {
       show: true,
     },
     {
-      label: "Bedrooms",
+      label: isVilla ? "Rooms" : "Bedrooms",
       value: property.bedrooms,
       show: property.property_type !== "land" && property.bedrooms,
     },
@@ -212,6 +220,33 @@ export default function PropertyDetail() {
       label: "Bathrooms",
       value: property.bathrooms,
       show: property.property_type !== "land" && property.bathrooms,
+    },
+    {
+      label: "Room Type",
+      value: property.room_type
+        ? property.room_type.charAt(0).toUpperCase() + property.room_type.slice(1)
+        : null,
+      show: isVilla,
+    },
+    {
+      label: "Floors",
+      value: property.num_floors,
+      show: isVilla,
+    },
+    {
+      label: "Room Rate",
+      value: formatRate(property.room_rate),
+      show: isVilla,
+    },
+    {
+      label: "Powder Room",
+      value:
+        property.has_powder_room === true
+          ? "Yes"
+          : property.has_powder_room === false
+            ? "No"
+            : null,
+      show: property.property_type !== "land",
     },
     {
       label: "Floor Area",

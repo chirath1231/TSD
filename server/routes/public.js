@@ -110,16 +110,16 @@ router.get("/properties", async (req, res) => {
       paramCount++;
     }
 
-    // Price filtering based on category
+    // Price filtering based on category (villas may only have a full villa rate)
     const nightlyPriced =
       category === "short_term_rent" || category === "holiday";
     if (min_price && nightlyPriced) {
-      query += `AND per_night_rate >= $${paramCount} `;
+      query += `AND (CASE WHEN property_type = 'villa' THEN villa_rate ELSE per_night_rate END) >= $${paramCount} `;
       params.push(Number(min_price));
       paramCount++;
     }
     if (max_price && nightlyPriced) {
-      query += `AND per_night_rate <= $${paramCount} `;
+      query += `AND (CASE WHEN property_type = 'villa' THEN villa_rate ELSE per_night_rate END) <= $${paramCount} `;
       params.push(Number(max_price));
       paramCount++;
     }

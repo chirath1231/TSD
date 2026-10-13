@@ -496,9 +496,11 @@
   padding: 80px 0;
   background: var(--bg);
 }
-.featured-grid {
+/* Compound selector so .desktop-only's display: block can't override the grid */
+.featured-grid,
+.featured-grid.desktop-only {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 24px;
 }
 
@@ -525,7 +527,7 @@
 }
 .property-card-image {
   position: relative;
-  height: 220px;
+  aspect-ratio: 4 / 3;
   overflow: hidden;
   background: var(--bg);
 }
@@ -1951,6 +1953,10 @@
   .categories-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+  .featured-grid,
+  .featured-grid.desktop-only {
+    grid-template-columns: repeat(2, 1fr);
+  }
   .why-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -1997,7 +2003,8 @@
   .featured-grid {
     grid-template-columns: 1fr;
   }
-  .desktop-only {
+  .desktop-only,
+  .featured-grid.desktop-only {
     display: none;
   }
   .mobile-only {

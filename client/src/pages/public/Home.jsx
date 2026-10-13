@@ -69,7 +69,11 @@ function PropertyCard({ prop }) {
       return "Rs. " + Number(prop.sale_price || 0).toLocaleString();
     if (prop.category === "short_term_rent" || prop.category === "holiday")
       return (
-        "Rs. " + Number(prop.per_night_rate || 0).toLocaleString() + " /night"
+        "Rs. " +
+        Number(
+          (prop.property_type === "villa" ? prop.villa_rate : prop.per_night_rate) || 0,
+        ).toLocaleString() +
+        " /night"
       );
     return "Rs. " + Number(prop.rent_per_month || 0).toLocaleString() + " /mo";
   };

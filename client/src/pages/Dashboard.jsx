@@ -22,6 +22,7 @@ const CATEGORY_LABELS = {
 const TYPE_LABELS = {
   apartment: "Apartment",
   house: "House",
+  villa: "Villa",
   commercial: "Commercial",
   land: "Land",
 };

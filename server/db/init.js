@@ -15,7 +15,7 @@ async function initDB() {
       CREATE TABLE IF NOT EXISTS properties (
         id SERIAL PRIMARY KEY,
         category TEXT NOT NULL CHECK(category IN ('short_term_rent', 'holiday', 'long_term_rent', 'sale')),
-        property_type TEXT NOT NULL CHECK(property_type IN ('apartment', 'house', 'commercial', 'land')),
+        property_type TEXT NOT NULL CHECK(property_type IN ('apartment', 'house', 'villa', 'commercial', 'land')),
         building_name TEXT,
         location TEXT,
         bedrooms INTEGER,
@@ -37,6 +37,10 @@ async function initDB() {
         sale_price NUMERIC,
         access_road_width TEXT,
         parking TEXT,
+        room_type TEXT CHECK(room_type IN ('single', 'double', 'triple')),
+        has_powder_room BOOLEAN,
+        room_rate NUMERIC,
+        villa_rate NUMERIC,
         description TEXT,
         status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive')),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -95,6 +99,38 @@ async function initDB() {
         IF dropped THEN
           ALTER TABLE properties ADD CONSTRAINT properties_category_check
             CHECK (category IN ('short_term_rent', 'holiday', 'long_term_rent', 'sale'));
+        END IF;
+      END $$;
+    `);
+
+    // Holiday let villa fields — add them to databases created before they existed
+    await db.query(`
+      ALTER TABLE properties ADD COLUMN IF NOT EXISTS room_type TEXT
+        CHECK(room_type IN ('single', 'double', 'triple'));
+      ALTER TABLE properties ADD COLUMN IF NOT EXISTS has_powder_room BOOLEAN;
+      ALTER TABLE properties ADD COLUMN IF NOT EXISTS room_rate NUMERIC;
+      ALTER TABLE properties ADD COLUMN IF NOT EXISTS villa_rate NUMERIC;
+    `);
+
+    // Same for the 'villa' property type: replace the old property_type CHECK constraint
+    await db.query(`
+      DO $$
+      DECLARE c RECORD;
+      DECLARE dropped BOOLEAN := false;
+      BEGIN
+        FOR c IN
+          SELECT conname FROM pg_constraint
+          WHERE conrelid = 'properties'::regclass
+            AND contype = 'c'
+            AND pg_get_constraintdef(oid) LIKE '%property_type%'
+            AND pg_get_constraintdef(oid) NOT LIKE '%villa%'
+        LOOP
+          EXECUTE format('ALTER TABLE properties DROP CONSTRAINT %I', c.conname);
+          dropped := true;
+        END LOOP;
+        IF dropped THEN
+          ALTER TABLE properties ADD CONSTRAINT properties_property_type_check
+            CHECK (property_type IN ('apartment', 'house', 'villa', 'commercial', 'land'));
         END IF;
       END $$;
     `);

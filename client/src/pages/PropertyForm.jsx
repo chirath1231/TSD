@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../utils/api";
 import { toast } from "react-toastify";
-import { FiUpload, FiX, FiPlus, FiSave, FiArrowLeft, FiLink } from "react-icons/fi";
+import { FiUpload, FiX, FiPlus, FiSave, FiArrowLeft } from "react-icons/fi";
 import TourBuilder360 from "../components/TourBuilder360";
 
 // Matches the server: multer accepts up to 20 files of 10MB each per request
@@ -24,6 +24,7 @@ const PROPERTY_TYPES = {
   holiday: [
     { value: "apartment", label: "Apartment" },
     { value: "house", label: "House" },
+    { value: "villa", label: "Villa" },
   ],
   long_term_rent: [
     { value: "apartment", label: "Apartment" },
@@ -37,6 +38,15 @@ const PROPERTY_TYPES = {
     { value: "commercial", label: "Commercial" },
   ],
 };
+
+const ROOM_TYPES = [
+  { value: "single", label: "Single" },
+  { value: "double", label: "Double" },
+  { value: "triple", label: "Triple" },
+];
+
+// Only stored for holiday let villas; cleared when saving any other property
+const VILLA_FIELDS = ["room_type", "room_rate", "villa_rate"];
 
 const ROOM_OPTIONS = [
   "Living Room",
@@ -87,6 +97,10 @@ const INITIAL_FORM = {
   sale_price: "",
   access_road_width: "",
   parking: "",
+  room_type: "",
+  has_powder_room: "false",
+  room_rate: "",
+  villa_rate: "",
   description: "",
   status: "active",
 };
@@ -117,9 +131,6 @@ export default function PropertyForm() {
   const [showInlineTourBuilder, setShowInlineTourBuilder] = useState(false);
   const [tourBuilderUnsaved, setTourBuilderUnsaved] = useState(false);
   const [tourSaveHighlight, setTourSaveHighlight] = useState(0);
-  const [quickPanoRoomName, setQuickPanoRoomName] = useState(ROOM_OPTIONS[0]);
-  const [quickPanoUrl, setQuickPanoUrl] = useState("");
-  const [quickPanoLoading, setQuickPanoLoading] = useState(false);
 
   // The saved main image is the primary one (or the first, for older properties).
   // Once a new main image is picked, the old one is kept as one of the "more" images.
@@ -222,7 +233,9 @@ export default function PropertyForm() {
       .then(({ data }) => {
         const formData = {};
         Object.keys(INITIAL_FORM).forEach((key) => {
-          formData[key] = data[key] ?? INITIAL_FORM[key];
+          const value = data[key] ?? INITIAL_FORM[key];
+          // Selects need strings, so booleans like has_powder_room become "true" / "false"
+          formData[key] = typeof value === "boolean" ? String(value) : value;
         });
         setForm(formData);
         setExistingImages(data.images || []);
@@ -296,6 +309,7 @@ export default function PropertyForm() {
     const isCommercial = property_type === "commercial";
     // Holiday lets are priced per night, like short term rentals
     const isNightly = category === "short_term_rent" || category === "holiday";
+    const isVilla = category === "holiday" && property_type === "villa";
 
     switch (field) {
       case "building_name":
@@ -311,7 +325,8 @@ export default function PropertyForm() {
         return (
           (isNightly || category === "long_term_rent") &&
           !isLand &&
-          !isCommercial
+          !isCommercial &&
+          !isVilla
         );
       case "max_occupancy":
         return category !== "sale" && !isLand;
@@ -320,7 +335,11 @@ export default function PropertyForm() {
       case "per_night_rate":
       case "per_week_rate":
       case "per_month_rate":
-        return isNightly;
+        return isNightly && !isVilla;
+      case "room_type":
+      case "room_rate":
+      case "villa_rate":
+        return isVilla;
       case "furnished":
         return (
           category === "long_term_rent" || (category === "sale" && !isLand)
@@ -335,13 +354,15 @@ export default function PropertyForm() {
       case "land_area":
         return category === "sale";
       case "num_floors":
-        return category === "sale" && !isLand;
+        return (category === "sale" && !isLand) || isVilla;
       case "sale_price":
         return category === "sale";
       case "access_road_width":
         return category === "sale";
       case "parking":
         return category === "sale" && !isLand;
+      case "has_powder_room":
+        return !isLand;
       default:
         return true;
     }
@@ -468,34 +489,6 @@ export default function PropertyForm() {
     toast.success("360° panorama linked from Tour Builder");
   };
 
-  const handleQuickPanorama = async () => {
-    const url = quickPanoUrl.trim();
-    if (!url) {
-      toast.error("Paste a direct 360° image link first");
-      return;
-    }
-
-    setQuickPanoLoading(true);
-    try {
-      const { data } = await api.post("/tours/quick-panorama", {
-        property_id: isEdit ? Number(id) : null,
-        room_name: quickPanoRoomName,
-        image_url: url,
-      });
-      const tourUrl = `${window.location.origin}/api/tours/view/${data.tour_id}`;
-      setVirtualTours((prev) => [
-        ...prev,
-        { room_name: data.room_name, tour_url: tourUrl },
-      ]);
-      setQuickPanoUrl("");
-      toast.success("360° panorama fetched and added");
-    } catch (err) {
-      toast.error(err.response?.data?.error || "Failed to import panorama");
-    } finally {
-      setQuickPanoLoading(false);
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -514,7 +507,10 @@ export default function PropertyForm() {
     try {
       const formData = new FormData();
 
+      const isVilla =
+        form.category === "holiday" && form.property_type === "villa";
       Object.entries(form).forEach(([key, val]) => {
+        if (!isVilla && VILLA_FIELDS.includes(key)) return;
         if (val !== "" && val !== null && val !== undefined) {
           formData.append(key, val);
         }
@@ -636,7 +632,9 @@ export default function PropertyForm() {
                 <label>
                   {form.property_type === "apartment"
                     ? "Apartment Building Name"
-                    : "Property Name"}
+                    : form.property_type === "villa"
+                      ? "Villa Name"
+                      : "Property Name"}
                 </label>
                 <input
                   type="text"
@@ -661,7 +659,11 @@ export default function PropertyForm() {
             )}
             {showField("bedrooms") && (
               <div className="form-group">
-                <label>No. of Bedrooms</label>
+                <label>
+                  {form.property_type === "villa"
+                    ? "Number of Rooms"
+                    : "No. of Bedrooms"}
+                </label>
                 <input
                   type="number"
                   name="bedrooms"
@@ -713,7 +715,11 @@ export default function PropertyForm() {
             )}
             {showField("num_floors") && (
               <div className="form-group">
-                <label>No. of Floors</label>
+                <label>
+                  {form.property_type === "villa"
+                    ? "Property Floors"
+                    : "No. of Floors"}
+                </label>
                 <input
                   type="number"
                   name="num_floors"
@@ -722,6 +728,23 @@ export default function PropertyForm() {
                   onChange={handleChange}
                   placeholder="e.g. 2"
                 />
+              </div>
+            )}
+            {showField("room_type") && (
+              <div className="form-group">
+                <label>Room Type</label>
+                <select
+                  name="room_type"
+                  value={form.room_type}
+                  onChange={handleChange}
+                >
+                  <option value="">Select…</option>
+                  {ROOM_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
             {showField("story_type") && (
@@ -763,6 +786,27 @@ export default function PropertyForm() {
                   onChange={handleChange}
                   placeholder="e.g. 6"
                 />
+              </div>
+            )}
+            {showField("has_powder_room") && (
+              <div className="form-group">
+                <label>Powder Room</label>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={form.has_powder_room === "true"}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        has_powder_room: String(e.target.checked),
+                      }))
+                    }
+                  />
+                  <span className="toggle-track" />
+                  <span className="toggle-text">
+                    {form.has_powder_room === "true" ? "Yes" : "No"}
+                  </span>
+                </label>
               </div>
             )}
             {showField("access_road_width") && (
@@ -858,6 +902,34 @@ export default function PropertyForm() {
                   value={form.per_month_rate}
                   onChange={handleChange}
                   placeholder="e.g. 300000"
+                />
+              </div>
+            )}
+            {showField("room_rate") && (
+              <div className="form-group">
+                <label>Room Rate (Rs. per night)</label>
+                <input
+                  type="number"
+                  name="room_rate"
+                  min="0"
+                  step="0.01"
+                  value={form.room_rate}
+                  onChange={handleChange}
+                  placeholder="e.g. 12000"
+                />
+              </div>
+            )}
+            {showField("villa_rate") && (
+              <div className="form-group">
+                <label>Villa Rate (Rs. per night, full villa)</label>
+                <input
+                  type="number"
+                  name="villa_rate"
+                  min="0"
+                  step="0.01"
+                  value={form.villa_rate}
+                  onChange={handleChange}
+                  placeholder="e.g. 60000"
                 />
               </div>
             )}
@@ -1090,47 +1162,6 @@ export default function PropertyForm() {
             new tab on the property page, since most tour hosts don't allow
             embedding elsewhere.
           </p>
-
-          <div
-            style={{
-              display: "flex",
-              gap: 8,
-              flexWrap: "wrap",
-              alignItems: "center",
-              marginBottom: 16,
-              padding: 12,
-              border: "1px dashed var(--border-color, #ccc)",
-              borderRadius: 8,
-            }}
-          >
-            <select
-              value={quickPanoRoomName}
-              onChange={(e) => setQuickPanoRoomName(e.target.value)}
-              style={{ flex: "0 0 auto" }}
-            >
-              {ROOM_OPTIONS.map((room) => (
-                <option key={room} value={room}>
-                  {room}
-                </option>
-              ))}
-            </select>
-            <input
-              type="url"
-              value={quickPanoUrl}
-              onChange={(e) => setQuickPanoUrl(e.target.value)}
-              placeholder="Paste a direct 360° image link (.jpg/.png) to fetch and add automatically"
-              style={{ flex: "1 1 260px" }}
-            />
-            <button
-              type="button"
-              className="add-tour-btn"
-              onClick={handleQuickPanorama}
-              disabled={quickPanoLoading}
-            >
-              <FiLink size={16} />{" "}
-              {quickPanoLoading ? "Fetching..." : "Fetch & Add Panorama"}
-            </button>
-          </div>
 
           <div className="tour-list">
             {virtualTours.map((tour, i) => (

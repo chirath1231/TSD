@@ -21,6 +21,7 @@ const CATEGORY_LABELS = {
 const TYPE_LABELS = {
   apartment: "Apartment",
   house: "House",
+  villa: "Villa",
   commercial: "Commercial",
   land: "Land",
 };
@@ -80,7 +81,10 @@ export default function PropertyList() {
   const getPrice = (p) => {
     if (p.category === "sale") return formatPrice(p.sale_price);
     if (p.category === "short_term_rent" || p.category === "holiday")
-      return formatPrice(p.per_night_rate) + "/night";
+      return (
+        formatPrice(p.property_type === "villa" ? p.villa_rate : p.per_night_rate) +
+        "/night"
+      );
     if (p.category === "long_term_rent")
       return formatPrice(p.rent_per_month) + "/mo";
     return "—";

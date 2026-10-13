@@ -57,6 +57,13 @@ const uploadImages = (req, res, next) => {
   });
 };
 
+// Form data sends the powder room choice as "true" / "false"; anything else is unset
+function parseBoolean(value) {
+  if (value === true || value === "true") return true;
+  if (value === false || value === "false") return false;
+  return null;
+}
+
 // Make sure a property with images always has exactly one main (primary) image
 async function ensurePrimaryImage(propertyId) {
   const primary = await db
@@ -218,8 +225,9 @@ router.post(
         floor_area, land_area, num_floors, story_type, furnished, max_occupancy,
         min_stay, per_night_rate, per_week_rate, per_month_rate, rent_per_month,
         security_deposit, upfront_rental, rental_period, sale_price,
-        access_road_width, parking, description, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
+        access_road_width, parking, description, status,
+        room_type, has_powder_room, room_rate, villa_rate
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
       RETURNING id
     `,
         )
@@ -249,6 +257,10 @@ router.post(
           d.parking || null,
           d.description || null,
           d.status || "active",
+          d.room_type || null,
+          parseBoolean(d.has_powder_room),
+          d.room_rate || null,
+          d.villa_rate || null,
         );
 
       const propertyId = result?.rows?.[0]?.id;
@@ -318,8 +330,9 @@ router.put(
         min_stay=$13, per_night_rate=$14, per_week_rate=$15, per_month_rate=$16,
         rent_per_month=$17, security_deposit=$18, upfront_rental=$19,
         rental_period=$20, sale_price=$21, access_road_width=$22, parking=$23,
-        description=$24, status=$25, updated_at=CURRENT_TIMESTAMP
-      WHERE id=$26
+        description=$24, status=$25, room_type=$26, has_powder_room=$27,
+        room_rate=$28, villa_rate=$29, updated_at=CURRENT_TIMESTAMP
+      WHERE id=$30
     `,
         )
         .run(
@@ -348,6 +361,10 @@ router.put(
           d.parking || null,
           d.description || null,
           d.status || "active",
+          d.room_type || null,
+          parseBoolean(d.has_powder_room),
+          d.room_rate || null,
+          d.villa_rate || null,
           id,
         );
 
