@@ -407,6 +407,7 @@ export default function TourBuilder360({
   const [targetSceneId, setTargetSceneId] = useState('');
   const [status, setStatus] = useState({ msg: 'No scene loaded', cls: '' });
   const [toast, setToast] = useState({ msg: '', show: false });
+  const [uploadLabel, setUploadLabel] = useState('');
   const [hasFile, setHasFile] = useState(false);
   const [hotspotPositions, setHotspotPositions] = useState({});
   const [showEmpty, setShowEmpty] = useState(true);
