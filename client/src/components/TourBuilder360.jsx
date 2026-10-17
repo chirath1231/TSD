@@ -407,8 +407,6 @@ export default function TourBuilder360({
   const [targetSceneId, setTargetSceneId] = useState('');
   const [status, setStatus] = useState({ msg: 'No scene loaded', cls: '' });
   const [toast, setToast] = useState({ msg: '', show: false });
-  const [uploadLabel, setUploadLabel] = useState('');
-  const [hasFile, setHasFile] = useState(false);
   const [hotspotPositions, setHotspotPositions] = useState({});
   const [showEmpty, setShowEmpty] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -774,8 +772,6 @@ export default function TourBuilder360({
         loadTexture(localPreviewUrl);
         updateStatus(next, currentSceneIdRef.current);
         if (sc) {
-          setUploadLabel('✓ ' + sc.name);
-          setHasFile(true);
           showToast(`Scene "${sc.name}" uploaded`);
         }
         return next;
@@ -964,13 +960,7 @@ export default function TourBuilder360({
           <div className="tb-brand">360° <span>Tour Builder</span></div>
           <div className="tb-sep" />
 
-          <div className={`tb-upload-wrap${hasFile ? ' has-file' : ''}`}>
-            <input type="file" accept="image/*" ref={uploadRef} onChange={onFileChange} />
-            <div className="tb-upload-label">{uploadLabel}</div>
-          </div>
-
-
-          <div className="tb-sep" />
+          <input type="file" accept="image/*" ref={uploadRef} onChange={onFileChange} style={{ display: 'none' }} />
 
           <button type="button" className={`tb-btn primary${adding ? ' active' : ''}`} onClick={toggleAddMode}>
             {adding ? '✕ Cancel' : '＋ Add Hotspot'}
