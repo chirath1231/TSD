@@ -56,30 +56,6 @@ const STYLES = `
 .tb-brand span { color: var(--tb-text); }
 .tb-sep { width: 1px; height: 28px; background: var(--tb-border); }
 
-.tb-upload-wrap {
-  position: relative;
-  overflow: hidden;
-  cursor: pointer;
-}
-.tb-upload-wrap input[type=file] {
-  position: absolute; inset: 0; opacity: 0; cursor: pointer;
-}
-.tb-upload-label {
-  display: flex; align-items: center; gap: 6px;
-  padding: 7px 14px;
-  background: var(--tb-panel);
-  border: 1px solid var(--tb-border);
-  border-radius: 8px;
-  font-size: 12px;
-  color: var(--tb-muted);
-  cursor: pointer;
-  transition: all .2s;
-  white-space: nowrap;
-  pointer-events: none;
-}
-.tb-upload-wrap:hover .tb-upload-label { border-color: var(--tb-primary); color: var(--tb-primary); background: #eef7f1; }
-.tb-upload-wrap.has-file .tb-upload-label { border-color: var(--tb-primary); color: var(--tb-primary); background: #e8f5ed; }
-
 .tb-btn {
   display: flex; align-items: center; gap: 7px;
   padding: 7px 14px;
