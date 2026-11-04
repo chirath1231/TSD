@@ -1,19 +1,11 @@
 const express = require("express");
 const multer = require("multer");
 const path = require("path");
-const fs = require("fs");
 const db = require("../config/database");
 const authMiddleware = require("../middleware/auth");
-const uploadToOracle = require("../utils/oracleUpload");
+const { saveFile, deleteFile } = require("../utils/storage");
 const router = express.Router();
-const deleteFromOracle = require("../utils/oracleDelete");
 
-
-
-const uploadsDir = path.join(__dirname, "..", "uploads", "properties");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
 
 const storage = multer.memoryStorage();
 
@@ -271,7 +263,7 @@ router.post(
       const otherFiles = req.files?.images || [];
       const orderedFiles = mainFile ? [mainFile, ...otherFiles] : otherFiles;
       for (let i = 0; i < orderedFiles.length; i++) {
-        const imageUrl = await uploadToOracle(orderedFiles[i]);
+        const imageUrl = await saveFile(orderedFiles[i]);
 
         await db.prepare(
           "INSERT INTO property_images (property_id, image_path, is_primary) VALUES ($1, $2, $3)"
@@ -371,7 +363,7 @@ router.put(
       // A newly uploaded main image replaces the current main image
       const mainFile = req.files?.main_image?.[0];
       if (mainFile) {
-        const imageUrl = await uploadToOracle(mainFile);
+        const imageUrl = await saveFile(mainFile);
         await db
           .prepare(
             "UPDATE property_images SET is_primary = 0 WHERE property_id = $1",
@@ -385,7 +377,7 @@ router.put(
       }
 
       for (const file of req.files?.images || []) {
-        const imageUrl = await uploadToOracle(file);
+        const imageUrl = await saveFile(file);
         await db
           .prepare(
             "INSERT INTO property_images (property_id, image_path, is_primary) VALUES ($1, $2, $3)",
@@ -402,12 +394,7 @@ router.put(
             )
             .get(imgId, id);
           if (img) {
-            if (img.image_path?.includes("/n/") && img.image_path?.includes("/b/")) {
-              await deleteFromOracle(img.image_path);
-            } else {
-              const filePath = path.join(__dirname, "..", img.image_path || "");
-              if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-            }
+            await deleteFile(img.image_path);
             await db
               .prepare("DELETE FROM property_images WHERE id = $1")
               .run(imgId);
@@ -458,7 +445,7 @@ router.delete("/:id", authMiddleware, async (req, res) => {
       .all(id);
 
     for (const img of images) {
-      await deleteFromOracle(img.image_path); // 🔥 important
+      await deleteFile(img.image_path);
     }
 
     await db.prepare("DELETE FROM properties WHERE id = $1").run(id);

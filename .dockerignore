@@ -5,3 +5,5 @@ client/dist
 client/dev.log
 server/db/*.db*
 .git
+server/uploads/properties/*
+!server/uploads/properties/.gitkeep

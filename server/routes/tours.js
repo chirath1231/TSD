@@ -3,7 +3,7 @@ const multer = require("multer");
 const dns = require("dns").promises;
 const net = require("net");
 const db = require("../config/database");
-const uploadToOracle = require("../utils/oracleUpload");
+const { saveFile } = require("../utils/storage");
 const authMiddleware = require("../middleware/auth");
 
 const router = express.Router();
@@ -146,7 +146,7 @@ router.post("/upload-scene", authMiddleware, upload.single("image"), async (req,
     if (!req.file) {
       return res.status(400).json({ error: "No image file provided" });
     }
-    const url = await uploadToOracle(req.file);
+    const url = await saveFile(req.file);
     res.json({ url });
   } catch (error) {
     console.error("UPLOAD scene error:", error);
@@ -154,7 +154,7 @@ router.post("/upload-scene", authMiddleware, upload.single("image"), async (req,
   }
 });
 
-/* Shared: fetch an image from an external URL and upload it to Oracle Cloud.
+/* Shared: fetch an image from an external URL and save it to local storage.
  * Throws an Error with a `.status` (HTTP status to report) on any failure. */
 async function importImageFromUrl(url) {
   if (!url || typeof url !== "string") {
@@ -228,7 +228,7 @@ async function importImageFromUrl(url) {
   const ext = contentType.split("/")[1] || "jpg";
   const originalname = `imported-${Date.now()}.${ext}`;
 
-  return uploadToOracle({
+  return saveFile({
     originalname,
     buffer,
     mimetype: contentType,
@@ -238,8 +238,8 @@ async function importImageFromUrl(url) {
 /* IMPORT SCENE IMAGE FROM A DIRECT URL */
 router.post("/import-from-url", authMiddleware, async (req, res) => {
   try {
-    const ociUrl = await importImageFromUrl(req.body.url);
-    res.json({ url: ociUrl });
+    const url = await importImageFromUrl(req.body.url);
+    res.json({ url: url });
   } catch (error) {
     if (error.status) return res.status(error.status).json({ error: error.message });
     console.error("IMPORT scene from URL error:", error);
@@ -254,7 +254,7 @@ router.post("/quick-panorama", authMiddleware, async (req, res) => {
     await ensureTourSchema();
     const { property_id, room_name, image_url } = req.body;
 
-    const ociUrl = await importImageFromUrl(image_url);
+    const url = await importImageFromUrl(image_url);
     const safeName = String(room_name || "360 Panorama").trim() || "360 Panorama";
 
     const tourResult = await db.query(
@@ -265,10 +265,10 @@ router.post("/quick-panorama", authMiddleware, async (req, res) => {
 
     await db.query(
       "INSERT INTO tour_scenes (tour_id, scene_id, name, image_url) VALUES ($1,$2,$3,$4)",
-      [tourId, "scene-1", safeName, ociUrl]
+      [tourId, "scene-1", safeName, url]
     );
 
-    res.json({ tour_id: tourId, room_name: safeName, image_url: ociUrl });
+    res.json({ tour_id: tourId, room_name: safeName, image_url: url });
   } catch (error) {
     if (error.status) return res.status(error.status).json({ error: error.message });
     console.error("QUICK panorama error:", error);

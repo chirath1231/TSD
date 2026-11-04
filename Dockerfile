@@ -20,6 +20,11 @@ RUN cd server && npm ci --omit=dev
 COPY server/ ./server/
 COPY --from=client-build /app/client/dist ./client/dist
 
+# Uploaded images are stored here. In Dokploy, mount a persistent volume at this path
+# (Advanced > Volumes) or uploaded files are lost on every redeploy.
+ENV UPLOAD_DIR=/app/server/uploads
+RUN mkdir -p /app/server/uploads/properties
+
 ENV PORT=5000
 EXPOSE 5000
 
