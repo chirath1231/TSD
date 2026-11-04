@@ -36,6 +36,19 @@ app.get("/api/test", (req, res) => {
 });
 
 /* =========================
+   FRONTEND (VPS deployment)
+   Serves the built React app (client/dist) when it exists, so a single
+   Node process handles both the site and the API.
+========================= */
+const clientDist = path.join(__dirname, "..", "client", "dist");
+if (require("fs").existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+  app.get(/^\/(?!api\/|uploads\/).*/, (req, res) => {
+    res.sendFile(path.join(clientDist, "index.html"));
+  });
+}
+
+/* =========================
    START SERVER
 ========================= */
 // Listen first so the host gets a response even if the DB is down,

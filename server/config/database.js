@@ -6,9 +6,9 @@ const pool = new Pool({
   database: process.env.DB_NAME,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  ssl: {
-    rejectUnauthorized: false, // Required for Railway.app
-  },
+  // Hosted DBs (Supabase/Railway) need SSL; a self-hosted Postgres on the VPS usually doesn't support it.
+  // Set DB_SSL=true to enable.
+  ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
   connectionTimeoutMillis: 10000, // fail fast instead of hanging forever if the DB is unreachable
 });
 
